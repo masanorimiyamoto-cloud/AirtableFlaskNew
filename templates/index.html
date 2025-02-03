@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Airtable 入力フォーム</title>
+    <style>
+        /* 🌟 全体のスタイル */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* 🌟 フォームコンテナ */
+        .container {
+            max-width: 400px;
+            margin: auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            text-align: left;
+        }
+
+        /* 🌟 ラベル */
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+        }
+
+        /* 🌟 入力欄 */
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        /* 🌟 ボタン */
+        button {
+            background-color: #007bff;
+            color: white;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        /* 🌟 メッセージ表示 */
+        .message {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Airtable 入力フォーム</h2>
+
+        <!-- ✅ メッセージ表示 -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- ✅ 入力フォーム -->
+        <form method="POST">
+            <label for="workcd">WorkCD:</label>
+            <input type="text" id="workcd" name="workcd" required>
+
+            <label for="workname">WorkName:</label>
+            <input type="text" id="workname" name="workname" readonly>
+
+            <label for="workprocess">WorkProcess:</label>
+            <select id="workprocess" name="workprocess" required>
+                <option value="">選択してください</option>
+                {% for item in workprocess_list %}
+                    <option value="{{ item }}">{{ item }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="workoutput">WorkOutput:</label>
+            <input type="text" id="workoutput" name="workoutput" required>
+
+            <label for="workday">WorkDay:</label>
+            <input type="date" id="workday" name="workday" required>
+
+            <button type="submit">送信</button>
+        </form>
+    </div>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const workcdInput = document.getElementById("workcd");
+        const worknameInput = document.getElementById("workname");
+
+        workcdInput.addEventListener("keypress", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                fetchWorkName();
+            }
+        });
+
+        function fetchWorkName() {
+            const workcd = workcdInput.value.trim();
+            if (workcd === "") {
+                worknameInput.value = "";
+                return;
+            }
+
+            fetch(`/get_workname?workcd=${workcd}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                        worknameInput.value = "";
+                    } else {
+                        worknameInput.value = data.workname;
+                    }
+                })
+                .catch(error => console.error("エラー:", error));
+        }
+    });
+    </script>
+
+</body>
+</html>
