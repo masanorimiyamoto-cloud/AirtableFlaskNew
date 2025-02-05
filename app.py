@@ -84,6 +84,28 @@ def get_workprocess_data():
         return [], {}, f"⚠ データ取得エラー: {str(e)}"
 
 # -------------------------------
+# WorkProcess に対応する UnitPrice を取得する API
+@app.route("/get_unitprice", methods=["GET"])
+def get_unitprice():
+    workprocess = request.args.get("workprocess")
+    if not workprocess:
+        return jsonify({"error": "WorkProcess が指定されていません"}), 400
+
+    params = {"filterByFormula": f"{{WorkProcess}}='{workprocess}'"}
+    response = requests.get(WORK_PROCESS_URL, headers=HEADERS, params=params)
+
+    if response.status_code != 200:
+        return jsonify({"error": "データ取得エラー"}), 500
+
+    data = response.json()
+    records = data.get("records", [])
+    
+    if not records:
+        return jsonify({"error": "該当する WorkProcess が見つかりません"}), 404
+
+    unitprice = records[0]["fields"].get("UnitPrice", "不明")
+    return jsonify({"unitprice": unitprice})
+
 # **Airtable へのデータ送信**
 def send_record_to_destination(workcord, workname, workoutput, workprocess, unitprice, workday):
     data = {
