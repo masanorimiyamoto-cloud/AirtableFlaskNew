@@ -73,12 +73,19 @@
             {% endif %}
         {% endwith %}
         <form method="POST">
+            <label for="personid">PersonID:</label>
+            <select id="personid" name="personid" required>
+                {% for id in personid_list %}
+                    <option value="{{ id }}" {% if id == selected_personid %}selected{% endif %}>{{ id }}</option>
+                {% endfor %}
+            </select>
+
             <label for="workcd">WorkCD:</label>
             <input type="text" id="workcd" name="workcd" required>
-            
+
             <label for="workname">WorkName:</label>
             <input type="text" id="workname" name="workname" readonly>
-            
+
             <label for="workprocess">WorkProcess:</label>
             <select id="workprocess" name="workprocess" required>
                 <option value="">選択してください</option>
@@ -86,16 +93,16 @@
                     <option value="{{ item }}">{{ item }}</option>
                 {% endfor %}
             </select>
-            
+
             <label for="unitprice">UnitPrice:</label>
             <input type="text" id="unitprice" name="unitprice" readonly>
-            
+
             <label for="workoutput">WorkOutput:</label>
             <input type="text" id="workoutput" name="workoutput" required>
-            
+
             <label for="workday">WorkDay:</label>
             <input type="date" id="workday" name="workday" required>
-            
+
             <button type="submit">送信</button>
         </form>
     </div>
@@ -107,6 +114,7 @@
         const workprocessSelect = document.getElementById("workprocess");
         const unitpriceInput = document.getElementById("unitprice");
 
+        // **WorkCD を入力したら Enter キーで WorkName を取得**
         workcdInput.addEventListener("keypress", function (event) {
             if (event.key === "Enter") {
                 event.preventDefault();
@@ -114,6 +122,7 @@
             }
         });
 
+        // **WorkProcess を選択したら UnitPrice を取得**
         workprocessSelect.addEventListener("change", function () {
             fetchUnitPrice();
         });
@@ -124,9 +133,12 @@
                 worknameInput.value = "";
                 return;
             }
+            console.log("Fetching WorkName for WorkCD:", workcd);
+
             fetch(`/get_workname?workcd=${workcd}`)
                 .then(response => response.json())
                 .then(data => {
+                    console.log("WorkName response:", data);
                     if (data.error) {
                         alert(data.error);
                         worknameInput.value = "";
@@ -143,9 +155,12 @@
                 unitpriceInput.value = "";
                 return;
             }
+            console.log("Fetching UnitPrice for WorkProcess:", workprocess);
+
             fetch(`/get_unitprice?workprocess=${encodeURIComponent(workprocess)}`)
                 .then(response => response.json())
                 .then(data => {
+                    console.log("UnitPrice response:", data);
                     if (data.error) {
                         unitpriceInput.value = "";
                     } else {
