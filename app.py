@@ -28,6 +28,50 @@ HEADERS = {
 # **登録された PersonID のリスト**
 PERSON_ID_LIST = [15, 18, 24, 36, 108]
 
+# **WorkCord & WorkName のキャッシュ**
+workcord_dict = {}
+
+# -------------------------------
+# **WorkCord と WorkName を一括取得**
+def load_workcord_data():
+    global workcord_dict
+    workcord_dict = {}  # 初期化
+    offset = None
+
+    try:
+        while True:
+            params = {"offset": offset} if offset else {}
+            response = requests.get(SOURCE_URL, headers=HEADERS, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            records = data.get("records", [])
+
+            # 📌 取得したデータを辞書に追加
+            for record in records:
+                fields = record.get("fields", {})
+                workcord = fields.get("WorkCord")  # **int 型**
+                workname = fields.get("WorkName")
+
+                if workcord and workname:
+                    workcord_dict[str(workcord)] = workname  # **🔴 `str` に変換して保存**
+
+            # **次のページがあるか確認**
+            offset = data.get("offset")
+            if not offset:
+                break  # **すべてのデータを取得したら終了**
+
+        print(f"✅ {len(workcord_dict)} 件の WorkCord データをキャッシュしました")
+
+    except requests.RequestException as e:
+        print(f"⚠ WorkCord データの取得に失敗: {e}")
+
+
+
+# **アプリ起動時にデータをロード**
+load_workcord_data()
+# WorkCord データのキャッシュを表示（デバッグ用）
+print(f"🔍 キャッシュされた WorkCord データ: {workcord_dict}")
+
 # -------------------------------
 # **WorkCD に対応する WorkName を取得する API**
 @app.route("/get_workname", methods=["GET"])
@@ -36,26 +80,12 @@ def get_workname():
     if not workcd.isdigit():
         return jsonify({"workname": "", "error": "⚠ WorkCD は数値で入力してください！"})
 
-    workname, error = get_workname_by_workcd(workcd)
-    if error:
-        return jsonify({"workname": "", "error": error})
+    # **辞書から即時取得**
+    workname = workcord_dict.get(workcd)
+    if not workname:
+        return jsonify({"workname": "", "error": f"⚠ WorkCD {workcd} のデータが見つかりません。"})
 
     return jsonify({"workname": workname, "error": ""})
-
-# -------------------------------
-# **WorkCD に対応する WorkName を取得**
-def get_workname_by_workcd(workcd):
-    params = {"filterByFormula": f"{{WorkCord}}={workcd}"}
-    try:
-        response = requests.get(SOURCE_URL, headers=HEADERS, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        records = data.get("records", [])
-        if not records:
-            return None, f"⚠ WorkCD {workcd} のデータが見つかりません。"
-        return records[0]["fields"].get("WorkName"), None
-    except requests.RequestException as e:
-        return None, f"⚠ データ取得エラー: {str(e)}"
 
 # -------------------------------
 # **TableWorkProcess のデータを取得**
@@ -104,7 +134,6 @@ def get_unitprice():
 
     unitprice = records[0]["fields"].get("UnitPrice", "不明")
     return jsonify({"unitprice": unitprice})
-
 # **Airtable へのデータ送信**
 def send_record_to_destination(dest_url, workcord, workname, workoutput, workprocess, unitprice, workday):
     data = {
@@ -132,7 +161,6 @@ def index():
     if error:
         flash(error, "error")
 
-    # デフォルトの選択 (最初は 15)
     selected_personid = request.form.get("personid", "15")
 
     if request.method == "POST":
@@ -157,13 +185,12 @@ def index():
             flash("⚠ すべてのフィールドを入力してください！", "error")
             return redirect(url_for("index"))
 
-        # PersonID に基づいて DEST_TABLE を動的に決定
         dest_table = f"TablePersonID_{selected_personid}"
         dest_url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{dest_table}"
 
-        workname, error = get_workname_by_workcd(workcd)
-        if error:
-            flash(error, "error")
+        workname = workcord_dict.get(workcd)
+        if not workname:
+            flash(f"⚠ WorkCD {workcd} のデータが見つかりません。", "error")
             return redirect(url_for("index"))
 
         unitprice = unitprice_dict.get(workprocess, 0)
@@ -175,5 +202,5 @@ def index():
     return render_template("index.html", workprocess_list=workprocess_list, personid_list=PERSON_ID_LIST, selected_personid=selected_personid)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # Render は PORT を自動設定
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=True)

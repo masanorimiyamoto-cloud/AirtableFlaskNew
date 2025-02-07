@@ -66,12 +66,19 @@
     <div class="container">
         <h2>Airtable 入力フォーム</h2>
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="message {{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+    {% if messages %}
+        <div id="flash-message">
+            {% for category, message in messages %}
+                <p class="{{ category }}">{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div id="flash-message"><p style="color: gray;">新しいデータを入力してください</p></div>
+    {% endif %}
+{% endwith %}
+
+
+
         <form method="POST">
             <label for="personid">PersonID:</label>
             <select id="personid" name="personid" required>
@@ -81,10 +88,10 @@
             </select>
 
             <label for="workcd">WorkCD:</label>
-            <input type="text" id="workcd" name="workcd" required>
+            <input type="text" name="workcd" id="workcd" oninput="resetMessage()" placeholder="WorkCord を入力">
 
             <label for="workname">WorkName:</label>
-            <input type="text" id="workname" name="workname" readonly>
+            <input type="text" name="workoutput" id="workoutput" oninput="resetMessage()" placeholder="WorkOutput を入力">
 
             <label for="workprocess">WorkProcess:</label>
             <select id="workprocess" name="workprocess" required>
@@ -106,6 +113,7 @@
             <button type="submit">送信</button>
         </form>
     </div>
+    
 
     <script>
     document.addEventListener("DOMContentLoaded", function () {
@@ -121,6 +129,19 @@
                 fetchWorkName();
             }
         });
+        setTimeout(function() {
+        let flashMessage = document.getElementById("flash-message");
+        if (flashMessage) {
+            flashMessage.style.display = "none";
+        }
+         }, 3000); // 3秒後に非表示
+                function resetMessage() {
+        let flashMessage = document.getElementById("flash-message");
+        if (flashMessage) {
+            flashMessage.innerHTML = "<p style='color: gray;'>新しいデータを入力してください</p>";
+         }
+        }
+ 
 
         // **WorkProcess を選択したら UnitPrice を取得**
         workprocessSelect.addEventListener("change", function () {
