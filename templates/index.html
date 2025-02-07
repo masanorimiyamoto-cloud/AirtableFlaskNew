@@ -119,20 +119,28 @@
             const workprocessSelect = document.getElementById("workprocess");
             const unitpriceInput = document.getElementById("unitprice");
         
-            // **WorkCD を入力すると即 WorkName を取得**
-            workcdInput.addEventListener("input", function () {
-                if (workcdInput.value.length >= 2) {  // 2桁以上の数字で取得
+            // **送信後、WorkCD にフォーカス**
+            function setFocusToWorkCD() {
+                setTimeout(() => {
+                    workcdInput.focus();
+                }, 100);  // 100ms 後にフォーカスを設定
+            }
+        
+            // **ページがロードされたときに WorkCD にフォーカス**
+            setFocusToWorkCD();
+        
+            // **WorkCD を入力したら Enter キーで WorkName を取得**
+            workcdInput.addEventListener("keypress", function (event) {
+                if (event.key === "Enter") {
+                    event.preventDefault();
                     fetchWorkName();
                 }
             });
         
-            // **WorkProcess を選択すると即 UnitPrice を取得**
-            workprocessSelect.addEventListener("change", fetchUnitPrice);
-        
-            // **ページ読み込み時に既存の WorkProcess の UnitPrice を取得**
-            if (workprocessSelect.value) {
-                fetchUnitPrice();
-            }
+            // **送信ボタンが押されたら WorkCD にフォーカスを移動**
+            document.querySelector("form").addEventListener("submit", function () {
+                setFocusToWorkCD();
+            });
         
             function fetchWorkName() {
                 const workcd = workcdInput.value.trim();
@@ -141,16 +149,22 @@
                     return;
                 }
         
-                console.log("Fetching WorkName for WorkCD:", workcd);
-        
                 fetch(`/get_workname?workcd=${workcd}`)
                     .then(response => response.json())
                     .then(data => {
-                        console.log("WorkName response:", data);
-                        worknameInput.value = data.workname || "";
+                        if (data.error) {
+                            alert(data.error);
+                            worknameInput.value = "";
+                        } else {
+                            worknameInput.value = data.workname;
+                        }
                     })
                     .catch(error => console.error("エラー:", error));
             }
+        
+            workprocessSelect.addEventListener("change", function () {
+                fetchUnitPrice();
+            });
         
             function fetchUnitPrice() {
                 const workprocess = workprocessSelect.value;
@@ -159,22 +173,20 @@
                     return;
                 }
         
-                console.log("Fetching UnitPrice for WorkProcess:", workprocess);
-        
                 fetch(`/get_unitprice?workprocess=${encodeURIComponent(workprocess)}`)
                     .then(response => response.json())
                     .then(data => {
-                        console.log("UnitPrice response:", data);
-                        if (data.unitprice) {
-                            unitpriceInput.value = data.unitprice;
-                        } else {
+                        if (data.error) {
                             unitpriceInput.value = "";
+                        } else {
+                            unitpriceInput.value = data.unitprice;
                         }
                     })
                     .catch(error => console.error("エラー:", error));
             }
         });
         </script>
+        
         
         
 </body>
