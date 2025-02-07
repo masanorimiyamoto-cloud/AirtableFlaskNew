@@ -78,14 +78,14 @@ print(f"🔍 キャッシュされた WorkCord データ: {workcord_dict}")
 def get_workname():
     workcd = request.args.get("workcd", "").strip()
     if not workcd.isdigit():
-        return jsonify({"workname": "", "error": "⚠ WorkCD は数値で入力してください！"})
+        return jsonify({"workname": ""})  # メッセージを表示しない
 
     # **辞書から即時取得**
-    workname = workcord_dict.get(workcd)
-    if not workname:
-        return jsonify({"workname": "", "error": f"⚠ WorkCD {workcd} のデータが見つかりません。"})
+    workname = workcord_dict.get(workcd, "")
 
-    return jsonify({"workname": workname, "error": ""})
+    return jsonify({"workname": workname})  # **エラーメッセージなし**
+
+
 
 # -------------------------------
 # **TableWorkProcess のデータを取得**
@@ -116,24 +116,30 @@ def get_workprocess_data():
 # WorkProcess に対応する UnitPrice を取得する API
 @app.route("/get_unitprice", methods=["GET"])
 def get_unitprice():
-    workprocess = request.args.get("workprocess")
+    workprocess = request.args.get("workprocess", "").strip()
     if not workprocess:
         return jsonify({"error": "WorkProcess が指定されていません"}), 400
+
+    print(f"🔍 WorkProcess 取得リクエスト: {workprocess}")  # デバッグログ
 
     params = {"filterByFormula": f"{{WorkProcess}}='{workprocess}'"}
     response = requests.get(WORK_PROCESS_URL, headers=HEADERS, params=params)
 
     if response.status_code != 200:
+        print(f"⚠ エラー: {response.status_code}, {response.text}")  # デバッグ
         return jsonify({"error": "データ取得エラー"}), 500
 
     data = response.json()
     records = data.get("records", [])
     
     if not records:
+        print("⚠ 該当する WorkProcess が見つかりません")  # デバッグ
         return jsonify({"error": "該当する WorkProcess が見つかりません"}), 404
 
     unitprice = records[0]["fields"].get("UnitPrice", "不明")
+    print(f"✅ UnitPrice: {unitprice}")  # デバッグ
     return jsonify({"unitprice": unitprice})
+
 # **Airtable へのデータ送信**
 def send_record_to_destination(dest_url, workcord, workname, workoutput, workprocess, unitprice, workday):
     data = {

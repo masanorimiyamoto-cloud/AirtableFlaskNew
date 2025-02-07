@@ -66,18 +66,16 @@
     <div class="container">
         <h2>Airtable 入力フォーム</h2>
         {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        <div id="flash-message">
-            {% for category, message in messages %}
-                <p class="{{ category }}">{{ message }}</p>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div id="flash-message"><p style="color: gray;">新しいデータを入力してください</p></div>
-    {% endif %}
-{% endwith %}
-
-
+            {% if messages %}
+                <div id="flash-message">
+                    {% for category, message in messages %}
+                        <p class="{{ category }}">{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div id="flash-message"><p style="color: gray;">新しいデータを入力してください</p></div>
+            {% endif %}
+        {% endwith %}
 
         <form method="POST">
             <label for="personid">PersonID:</label>
@@ -113,84 +111,71 @@
             <button type="submit">送信</button>
         </form>
     </div>
-    
 
     <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const workcdInput = document.getElementById("workcd");
-        const worknameInput = document.getElementById("workname");
-        const workprocessSelect = document.getElementById("workprocess");
-        const unitpriceInput = document.getElementById("unitprice");
-
-        // **WorkCD を入力したら Enter キーで WorkName を取得**
-        workcdInput.addEventListener("keypress", function (event) {
-            if (event.key === "Enter") {
-                event.preventDefault();
-                fetchWorkName();
+        document.addEventListener("DOMContentLoaded", function () {
+            const workcdInput = document.getElementById("workcd");
+            const worknameInput = document.getElementById("workname");
+            const workprocessSelect = document.getElementById("workprocess");
+            const unitpriceInput = document.getElementById("unitprice");
+        
+            // **WorkCD を入力すると即 WorkName を取得**
+            workcdInput.addEventListener("input", function () {
+                if (workcdInput.value.length >= 2) {  // 2桁以上の数字で取得
+                    fetchWorkName();
+                }
+            });
+        
+            // **WorkProcess を選択すると即 UnitPrice を取得**
+            workprocessSelect.addEventListener("change", fetchUnitPrice);
+        
+            // **ページ読み込み時に既存の WorkProcess の UnitPrice を取得**
+            if (workprocessSelect.value) {
+                fetchUnitPrice();
+            }
+        
+            function fetchWorkName() {
+                const workcd = workcdInput.value.trim();
+                if (workcd === "") {
+                    worknameInput.value = "";
+                    return;
+                }
+        
+                console.log("Fetching WorkName for WorkCD:", workcd);
+        
+                fetch(`/get_workname?workcd=${workcd}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("WorkName response:", data);
+                        worknameInput.value = data.workname || "";
+                    })
+                    .catch(error => console.error("エラー:", error));
+            }
+        
+            function fetchUnitPrice() {
+                const workprocess = workprocessSelect.value;
+                if (workprocess === "") {
+                    unitpriceInput.value = "";
+                    return;
+                }
+        
+                console.log("Fetching UnitPrice for WorkProcess:", workprocess);
+        
+                fetch(`/get_unitprice?workprocess=${encodeURIComponent(workprocess)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("UnitPrice response:", data);
+                        if (data.unitprice) {
+                            unitpriceInput.value = data.unitprice;
+                        } else {
+                            unitpriceInput.value = "";
+                        }
+                    })
+                    .catch(error => console.error("エラー:", error));
             }
         });
-        setTimeout(function() {
-        let flashMessage = document.getElementById("flash-message");
-        if (flashMessage) {
-            flashMessage.style.display = "none";
-        }
-         }, 3000); // 3秒後に非表示
-                function resetMessage() {
-        let flashMessage = document.getElementById("flash-message");
-        if (flashMessage) {
-            flashMessage.innerHTML = "<p style='color: gray;'>新しいデータを入力してください</p>";
-         }
-        }
- 
-
-        // **WorkProcess を選択したら UnitPrice を取得**
-        workprocessSelect.addEventListener("change", function () {
-            fetchUnitPrice();
-        });
-
-        function fetchWorkName() {
-            const workcd = workcdInput.value.trim();
-            if (workcd === "") {
-                worknameInput.value = "";
-                return;
-            }
-            console.log("Fetching WorkName for WorkCD:", workcd);
-
-            fetch(`/get_workname?workcd=${workcd}`)
-                .then(response => response.json())
-                .then(data => {
-                    console.log("WorkName response:", data);
-                    if (data.error) {
-                        alert(data.error);
-                        worknameInput.value = "";
-                    } else {
-                        worknameInput.value = data.workname;
-                    }
-                })
-                .catch(error => console.error("エラー:", error));
-        }
-
-        function fetchUnitPrice() {
-            const workprocess = workprocessSelect.value;
-            if (workprocess === "") {
-                unitpriceInput.value = "";
-                return;
-            }
-            console.log("Fetching UnitPrice for WorkProcess:", workprocess);
-
-            fetch(`/get_unitprice?workprocess=${encodeURIComponent(workprocess)}`)
-                .then(response => response.json())
-                .then(data => {
-                    console.log("UnitPrice response:", data);
-                    if (data.error) {
-                        unitpriceInput.value = "";
-                    } else {
-                        unitpriceInput.value = data.unitprice;
-                    }
-                })
-                .catch(error => console.error("エラー:", error));
-        }
-    });
-    </script>
+        </script>
+        
+        
 </body>
 </html>
