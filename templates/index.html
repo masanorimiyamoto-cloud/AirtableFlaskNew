@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Airtable 入力フォーム </title>
+    <title>Airtable 入力フォーム</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -64,7 +64,7 @@
 </head>
 <body>
     <div class="container">
-        <h2>Airtable 入力フォーム208.1804</h2>
+        <h2>Airtable 入力フォーム </h2>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div id="flash-message">
@@ -80,8 +80,10 @@
         <form method="POST">
             <label for="personid">PersonID:</label>
             <select id="personid" name="personid" required>
-                {% for id in personid_list %}
-                    <option value="{{ id }}" {% if id == selected_personid %}selected{% endif %}>{{ id }}</option>
+                {% for id, name in personid_dict.items() %}
+                   <option value="{{ id }}" {% if id == selected_personid %}selected{% endif %}>
+                   {{ id }} - {{ name }}
+                  </option>
                 {% endfor %}
             </select>
 
@@ -113,81 +115,60 @@
     </div>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const workcdInput = document.getElementById("workcd");
-            const worknameInput = document.getElementById("workname");
-            const workprocessSelect = document.getElementById("workprocess");
-            const unitpriceInput = document.getElementById("unitprice");
-        
-            // **送信後、WorkCD にフォーカス**
-            function setFocusToWorkCD() {
-                setTimeout(() => {
-                    workcdInput.focus();
-                }, 100);  // 100ms 後にフォーカスを設定
-            }
-        
-            // **ページがロードされたときに WorkCD にフォーカス**
-            setFocusToWorkCD();
-        
-            // **WorkCD を入力したら Enter キーで WorkName を取得**
-            workcdInput.addEventListener("keypress", function (event) {
-                if (event.key === "Enter") {
-                    event.preventDefault();
-                    fetchWorkName();
-                }
-            });
-        
-            // **送信ボタンが押されたら WorkCD にフォーカスを移動**
-            document.querySelector("form").addEventListener("submit", function () {
-                setFocusToWorkCD();
-            });
-        
-            function fetchWorkName() {
-                const workcd = workcdInput.value.trim();
-                if (workcd === "") {
-                    worknameInput.value = "";
-                    return;
-                }
-        
-                fetch(`/get_workname?workcd=${workcd}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.error) {
-                            alert(data.error);
-                            worknameInput.value = "";
-                        } else {
-                            worknameInput.value = data.workname;
-                        }
-                    })
-                    .catch(error => console.error("エラー:", error));
-            }
-        
-            workprocessSelect.addEventListener("change", function () {
-                fetchUnitPrice();
-            });
-        
-            function fetchUnitPrice() {
-                const workprocess = workprocessSelect.value;
-                if (workprocess === "") {
-                    unitpriceInput.value = "";
-                    return;
-                }
-        
-                fetch(`/get_unitprice?workprocess=${encodeURIComponent(workprocess)}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.error) {
-                            unitpriceInput.value = "";
-                        } else {
-                            unitpriceInput.value = data.unitprice;
-                        }
-                    })
-                    .catch(error => console.error("エラー:", error));
+    document.addEventListener("DOMContentLoaded", function () {
+        const workcdInput = document.getElementById("workcd");
+        const worknameInput = document.getElementById("workname");
+        const workprocessSelect = document.getElementById("workprocess");
+        const unitpriceInput = document.getElementById("unitprice");
+
+        workcdInput.addEventListener("keypress", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                fetchWorkName();
             }
         });
-        </script>
-        
-        
-        
+
+        workprocessSelect.addEventListener("change", function () {
+            fetchUnitPrice();
+        });
+
+        function fetchWorkName() {
+            const workcd = workcdInput.value.trim();
+            if (workcd === "") {
+                worknameInput.value = "";
+                return;
+            }
+            fetch(`/get_workname?workcd=${workcd}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                        worknameInput.value = "";
+                    } else {
+                        worknameInput.value = data.workname;
+                    }
+                })
+                .catch(error => console.error("エラー:", error));
+        }
+
+        function fetchUnitPrice() {
+            const workprocess = workprocessSelect.value;
+            if (workprocess === "") {
+                unitpriceInput.value = "";
+                return;
+            }
+            fetch(`/get_unitprice?workprocess=${encodeURIComponent(workprocess)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        unitpriceInput.value = "";
+                    } else {
+                        unitpriceInput.value = data.unitprice;
+                    }
+                })
+                .catch(error => console.error("エラー:", error));
+        }
+    });
+    </script>
 </body>
 </html>

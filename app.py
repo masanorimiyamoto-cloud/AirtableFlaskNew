@@ -1,11 +1,22 @@
 from flask import Flask, render_template, request, flash, redirect, url_for, jsonify
 import requests
-import datetime
+import gspread
 import json
 import os
+from oauth2client.service_account import ServiceAccountCredentials
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
+
+# ✅ **Google Sheets 設定**
+SERVICE_ACCOUNT_FILE = r"C:\Users\user\Documents\pythonproject\avid-keel-449310-n4-f87083ed3da7.json"
+SPREADSHEET_NAME = "AirtableTest129"
+WORKSHEET_NAME = "wsTableCD"
+
+# **Google Sheets API 認証**
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
+client = gspread.authorize(creds)
 
 # ==== Airtable 設定 ====
 with open("configAirtable.json", "r") as f:
@@ -25,66 +36,60 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-# **登録された PersonID のリスト**
-PERSON_ID_LIST = [15, 18, 24, 36, 108]
+# PersonID に対応する名前を辞書で管理
+PERSON_ID_DICT = {
+    15: "Aさん",
+    18: "Bさん",
+    24: "Cさん",
+    36: "Dさん",
+    108: "Eさん"
+}
 
-# **WorkCord & WorkName のキャッシュ**
+# ID のリスト（選択用）
+PERSON_ID_LIST = list(PERSON_ID_DICT.keys())
+
+
+# **キャッシュ用の辞書**
 workcord_dict = {}
 
-# -------------------------------
-# **WorkCord と WorkName を一括取得**
+# ✅ **Google Sheets から WorkCD & WorkName を取得**
 def load_workcord_data():
     global workcord_dict
     workcord_dict = {}  # 初期化
-    offset = None
 
     try:
-        while True:
-            params = {"offset": offset} if offset else {}
-            response = requests.get(SOURCE_URL, headers=HEADERS, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            records = data.get("records", [])
+        # **Google Sheets を開く**
+        sheet = client.open(SPREADSHEET_NAME).worksheet(WORKSHEET_NAME)
+        data = sheet.get_all_values()  # **すべてのデータを取得**
 
-            # 📌 取得したデータを辞書に追加
-            for record in records:
-                fields = record.get("fields", {})
-                workcord = fields.get("WorkCord")  # **int 型**
-                workname = fields.get("WorkName")
+        # **ヘッダー行をスキップし、データを辞書に格納**
+        for row in data[1:]:  # **1行目（ヘッダー）をスキップ**
+            workcord, workname = row[0], row[1]  # **WorkCD（列A）と WorkName（列B）**
+            if workcord.isdigit():
+                workcord_dict[workcord] = workname  # **辞書に保存**
 
-                if workcord and workname:
-                    workcord_dict[str(workcord)] = workname  # **🔴 `str` に変換して保存**
+        print(f"✅ Google Sheets から {len(workcord_dict)} 件の WorkCD をロードしました！")
 
-            # **次のページがあるか確認**
-            offset = data.get("offset")
-            if not offset:
-                break  # **すべてのデータを取得したら終了**
-
-        print(f"✅ {len(workcord_dict)} 件の WorkCord データをキャッシュしました")
-
-    except requests.RequestException as e:
-        print(f"⚠ WorkCord データの取得に失敗: {e}")
-
-
+    except Exception as e:
+        print(f"⚠ Google Sheets のデータ取得に失敗: {e}")
 
 # **アプリ起動時にデータをロード**
 load_workcord_data()
-# WorkCord データのキャッシュを表示（デバッグ用）
-#print(f"🔍 キャッシュされた WorkCord データ: {workcord_dict}")
 
 # -------------------------------
-# **WorkCD に対応する WorkName を取得する API**
+# ✅ **WorkCD に対応する WorkName を取得する API**
 @app.route("/get_workname", methods=["GET"])
 def get_workname():
     workcd = request.args.get("workcd", "").strip()
     if not workcd.isdigit():
-        return jsonify({"workname": ""})  # メッセージを表示しない
+        return jsonify({"workname": "", "error": "⚠ WorkCD は数値で入力してください！"})
 
     # **辞書から即時取得**
-    workname = workcord_dict.get(workcd, "")
+    workname = workcord_dict.get(workcd)
+    if not workname:
+        return jsonify({"workname": "", "error": ""})  # **メッセージを非表示に**
 
-    return jsonify({"workname": workname})  # **エラーメッセージなし**
-
+    return jsonify({"workname": workname, "error": ""})
 
 
 # -------------------------------
@@ -162,6 +167,7 @@ def send_record_to_destination(dest_url, workcord, workname, workoutput, workpro
 # -------------------------------
 # **Flask のルート**
 @app.route("/", methods=["GET", "POST"])
+
 def index():
     workprocess_list, unitprice_dict, error = get_workprocess_data()
     if error:
@@ -205,7 +211,12 @@ def index():
         flash(response_text, "success" if status_code == 200 else "error")
         return redirect(url_for("index"))
 
-    return render_template("index.html", workprocess_list=workprocess_list, personid_list=PERSON_ID_LIST, selected_personid=selected_personid)
+    return render_template("index.html",
+                           workprocess_list=workprocess_list,
+                           personid_list=PERSON_ID_LIST,
+                           personid_dict=PERSON_ID_DICT,  # PersonID の辞書を追加
+                           selected_personid=selected_personid)
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
