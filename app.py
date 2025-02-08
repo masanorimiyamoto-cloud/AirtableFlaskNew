@@ -70,7 +70,7 @@ def load_workcord_data():
 # **アプリ起動時にデータをロード**
 load_workcord_data()
 # WorkCord データのキャッシュを表示（デバッグ用）
-print(f"🔍 キャッシュされた WorkCord データ: {workcord_dict}")
+#print(f"🔍 キャッシュされた WorkCord データ: {workcord_dict}")
 
 # -------------------------------
 # **WorkCD に対応する WorkName を取得する API**
@@ -120,7 +120,7 @@ def get_unitprice():
     if not workprocess:
         return jsonify({"error": "WorkProcess が指定されていません"}), 400
 
-    print(f"🔍 WorkProcess 取得リクエスト: {workprocess}")  # デバッグログ
+    #print(f"🔍 WorkProcess 取得リクエスト: {workprocess}")  # デバッグログ
 
     params = {"filterByFormula": f"{{WorkProcess}}='{workprocess}'"}
     response = requests.get(WORK_PROCESS_URL, headers=HEADERS, params=params)
