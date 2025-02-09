@@ -9,7 +9,8 @@ app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
 # ✅ **Google Sheets 設定**
-SERVICE_ACCOUNT_FILE = "configGooglesheet.json"
+SERVICE_ACCOUNT_FILE = "configMyGoogleSheet.json"  # Render の Secret File に保存済み
+#SERVICE_ACCOUNT_FILE = "configGooglesheet.json"
 SPREADSHEET_NAME = "AirtableTest129"
 WORKSHEET_NAME = "wsTableCD"
 
