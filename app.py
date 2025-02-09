@@ -9,8 +9,8 @@ app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
 # ✅ **Google Sheets 設定**
-SERVICE_ACCOUNT_FILE = "configMyGoogleSheet.json"  # Render の Secret File に保存済み
-#SERVICE_ACCOUNT_FILE = "configGooglesheet.json"
+#SERVICE_ACCOUNT_FILE = "configGooglesheet.json"  # Render の Secret File に保存済み
+SERVICE_ACCOUNT_FILE = r"C:\Users\user\OneDrive\SKY\pythonproject2025130\avid-keel-449310-n4-371c2abfe6fc.json"
 SPREADSHEET_NAME = "AirtableTest129"
 WORKSHEET_NAME = "wsTableCD"
 
@@ -53,26 +53,28 @@ PERSON_ID_LIST = list(PERSON_ID_DICT.keys())
 # **キャッシュ用の辞書**
 workcord_dict = {}
 
-# ✅ **Google Sheets から WorkCD & WorkName を取得**
 def load_workcord_data():
     global workcord_dict
     workcord_dict = {}  # 初期化
 
     try:
-        # **Google Sheets を開く**
         sheet = client.open(SPREADSHEET_NAME).worksheet(WORKSHEET_NAME)
-        data = sheet.get_all_values()  # **すべてのデータを取得**
 
-        # **ヘッダー行をスキップし、データを辞書に格納**
-        for row in data[1:]:  # **1行目（ヘッダー）をスキップ**
-            workcord, workname = row[0], row[1]  # **WorkCD（列A）と WorkName（列B）**
-            if workcord.isdigit():
-                workcord_dict[workcord] = workname  # **辞書に保存**
+        # **すべてのデータを取得（辞書形式）**
+        records = sheet.get_all_records()
+
+        # **辞書にデータを格納**
+        for row in records:
+            workcord = str(row.get("WorkCord"))  # WorkCD を文字列に変換
+            workname = row.get("WorkName")  # WorkName
+            if workcord and workname:
+                workcord_dict[workcord] = workname
 
         print(f"✅ Google Sheets から {len(workcord_dict)} 件の WorkCD をロードしました！")
 
     except Exception as e:
         print(f"⚠ Google Sheets のデータ取得に失敗: {e}")
+
 
 # **アプリ起動時にデータをロード**
 load_workcord_data()
