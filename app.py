@@ -9,7 +9,7 @@ app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
 # ✅ **Google Sheets 設定**
-SERVICE_ACCOUNT_FILE = "configGooglesheet.json.json"
+SERVICE_ACCOUNT_FILE = "configGooglesheet.json"
 SPREADSHEET_NAME = "AirtableTest129"
 WORKSHEET_NAME = "wsTableCD"
 
