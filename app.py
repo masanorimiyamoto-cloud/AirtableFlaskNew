@@ -70,14 +70,14 @@ def load_workcord_data():
             if workcord and workname:
                 workcord_dict[workcord] = workname
 
-        print(f"✅ Google Sheets から {len(workcord_dict)} 件の WorkCD をロードしました！")
+        print(f"✅ Google Sheets から {len(workcord_dict)} 件の WorkCD をロードしました！0209.19")
 
     except Exception as e:
         print(f"⚠ Google Sheets のデータ取得に失敗: {e}")
 
 
 # **アプリ起動時にデータをロード**
-load_workcord_data()
+#load_workcord_data()
 
 # -------------------------------
 # ✅ **WorkCD に対応する WorkName を取得する API**
@@ -172,6 +172,8 @@ def send_record_to_destination(dest_url, workcord, workname, workoutput, workpro
 @app.route("/", methods=["GET", "POST"])
 
 def index():
+
+    load_workcord_data()  # ✅ ここで最新データを取得するようにする
     workprocess_list, unitprice_dict, error = get_workprocess_data()
     if error:
         flash(error, "error")
