@@ -91,7 +91,7 @@
             <input type="text" id="workcd" name="workcd" required>
 
             <label for="workname">WorkName:</label>
-            <!-- 入力された WorkCD に応じた選択肢を表示するため select 要素に変更 -->
+            <!-- WorkName は取得した複数の候補から選択 -->
             <select id="workname" name="workname" required>
                 <option value="">該当する WorkName を選択してください</option>
             </select>
@@ -124,47 +124,44 @@
         const workprocessSelect = document.getElementById("workprocess");
         const unitpriceInput = document.getElementById("unitprice");
 
-        // WorkCD 入力欄で Enter キーが押された際に該当する WorkName 選択肢を取得
+        // リターンキーを押したときのみ WorkName を取得
         workcdInput.addEventListener("keypress", function (event) {
             if (event.key === "Enter") {
                 event.preventDefault();
-                fetchWorkName();
+                fetchWorkNames();
             }
         });
+        // ※blur イベントによる自動取得は削除しました
 
-        // WorkProcess 選択時に単価を取得
         workprocessSelect.addEventListener("change", function () {
             fetchUnitPrice();
         });
 
-        function fetchWorkName() {
+        function fetchWorkNames() {
             const workcd = workcdInput.value.trim();
+            // セレクトボックスを初期化
+            worknameSelect.innerHTML = '<option value="">該当する WorkName を選択してください</option>';
             if (workcd === "") {
-                worknameSelect.innerHTML = '<option value="">該当する WorkName を選択してください</option>';
                 return;
             }
             fetch(`/get_workname?workcd=${workcd}`)
                 .then(response => response.json())
                 .then(data => {
-                    worknameSelect.innerHTML = '';
                     if (data.error) {
                         alert(data.error);
-                        worknameSelect.innerHTML = '<option value="">該当する WorkName を選択してください</option>';
                         return;
                     }
-                    if (data.options.length === 0) {
-                        worknameSelect.innerHTML = '<option value="">該当する WorkName が見つかりません</option>';
+                    const records = data.worknames;
+                    if (records.length === 0) {
+                        alert("該当する WorkName が見つかりません");
                         return;
                     }
-                    let defaultOption = document.createElement("option");
-                    defaultOption.value = "";
-                    defaultOption.textContent = "該当する WorkName を選択してください";
-                    worknameSelect.appendChild(defaultOption);
-                    data.options.forEach(option => {
-                        let opt = document.createElement("option");
-                        opt.value = option.value;  // "WorkName||BookName" 形式
-                        opt.textContent = option.display;  // 表示例: "作業名 (書籍名)"
-                        worknameSelect.appendChild(opt);
+                    records.forEach(record => {
+                        const option = document.createElement("option");
+                        // value は "workname||bookname" の形式（※区切り文字 "||" は各文字列に含まれない前提）
+                        option.value = record.workname + "||" + record.bookname;
+                        option.text = record.workname + " (" + record.bookname + ")";
+                        worknameSelect.appendChild(option);
                     });
                 })
                 .catch(error => console.error("エラー:", error));
