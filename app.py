@@ -9,10 +9,10 @@ app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
 # ✅ **Google Sheets 設定**
-SERVICE_ACCOUNT_FILE = "configGooglesheet.json"  # Render の Secret File に保存済み
-#SERVICE_ACCOUNT_FILE = r"C:\Users\user\OneDrive\SKY\pythonproject2025130\avid-keel-449310-n4-371c2abfe6fc.json"
+#SERVICE_ACCOUNT_FILE = "configGooglesheet.json"  # Render の Secret File に保存済み
+SERVICE_ACCOUNT_FILE = r"C:\Users\user\OneDrive\SKY\pythonproject2025130\avid-keel-449310-n4-371c2abfe6fc.json"
 SPREADSHEET_NAME = "AirtableTest129"
-WORKSHEET_NAME = "wsTableCD"
+WORKSHEET_NAME = "wsTableCD"  # ここに BookName フィールドも含む
 
 # **Google Sheets API 認証**
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -49,8 +49,8 @@ PERSON_ID_DICT = {
 # ID のリスト（選択用）
 PERSON_ID_LIST = list(PERSON_ID_DICT.keys())
 
-
 # **キャッシュ用の辞書**
+# workcord_dict は、キーが文字列の WorkCord、値が {workname, bookname} の辞書のリストとなる
 workcord_dict = {}
 
 def load_workcord_data():
@@ -59,41 +59,43 @@ def load_workcord_data():
 
     try:
         sheet = client.open(SPREADSHEET_NAME).worksheet(WORKSHEET_NAME)
-
-        # **すべてのデータを取得（辞書形式）**
+        # シート内すべてのデータを取得（各行は辞書）
         records = sheet.get_all_records()
-
-        # **辞書にデータを格納**
         for row in records:
-            workcord = str(row.get("WorkCord"))  # WorkCD を文字列に変換
-            workname = row.get("WorkName")  # WorkName
+            workcord = str(row.get("WorkCord", "")).strip()
+            workname = str(row.get("WorkName", "")).strip()
+            bookname = str(row.get("BookName", "")).strip()
             if workcord and workname:
-                workcord_dict[workcord] = workname
-
-        print(f"✅ Google Sheets から {len(workcord_dict)} 件の WorkCD をロードしました！0209.19")
-
+                if workcord not in workcord_dict:
+                    workcord_dict[workcord] = []
+                workcord_dict[workcord].append({"workname": workname, "bookname": bookname})
+        total_records = sum(len(lst) for lst in workcord_dict.values())
+        print(f"✅ Google Sheets から {total_records} 件の WorkCD/WorkName/BookName レコードをロードしました！")
     except Exception as e:
         print(f"⚠ Google Sheets のデータ取得に失敗: {e}")
 
-
-# **アプリ起動時にデータをロード**
-#load_workcord_data()
-
 # -------------------------------
-# ✅ **WorkCD に対応する WorkName を取得する API**
+# ✅ **WorkCD に対応する WorkName/BookName の選択肢を取得する API**
 @app.route("/get_workname", methods=["GET"])
 def get_workname():
     workcd = request.args.get("workcd", "").strip()
     if not workcd.isdigit():
-        return jsonify({"workname": "", "error": "⚠ WorkCD は数値で入力してください！"})
-
-    # **辞書から即時取得**
-    workname = workcord_dict.get(workcd)
-    if not workname:
-        return jsonify({"workname": "", "error": ""})  # **メッセージを非表示に**
-
-    return jsonify({"workname": workname, "error": ""})
-
+        return jsonify({"options": [], "error": "⚠ WorkCD は数値で入力してください！"})
+    
+    records = workcord_dict.get(workcd, [])
+    if not records:
+        return jsonify({"options": [], "error": ""})
+    
+    options = []
+    # 各レコードについて option を作成
+    for rec in records:
+        workname = rec.get("workname", "")
+        bookname = rec.get("bookname", "")
+        # value: 識別のために "WorkName||BookName" とする
+        value = f"{workname}||{bookname}"
+        display = f"{workname} ({bookname})" if bookname else workname
+        options.append({"value": value, "display": display})
+    return jsonify({"options": options, "error": ""})
 
 # -------------------------------
 # **TableWorkProcess のデータを取得**
@@ -128,32 +130,32 @@ def get_unitprice():
     if not workprocess:
         return jsonify({"error": "WorkProcess が指定されていません"}), 400
 
-    #print(f"🔍 WorkProcess 取得リクエスト: {workprocess}")  # デバッグログ
-
     params = {"filterByFormula": f"{{WorkProcess}}='{workprocess}'"}
     response = requests.get(WORK_PROCESS_URL, headers=HEADERS, params=params)
 
     if response.status_code != 200:
-        print(f"⚠ エラー: {response.status_code}, {response.text}")  # デバッグ
+        print(f"⚠ エラー: {response.status_code}, {response.text}")
         return jsonify({"error": "データ取得エラー"}), 500
 
     data = response.json()
     records = data.get("records", [])
     
     if not records:
-        print("⚠ 該当する WorkProcess が見つかりません")  # デバッグ
+        print("⚠ 該当する WorkProcess が見つかりません")
         return jsonify({"error": "該当する WorkProcess が見つかりません"}), 404
 
     unitprice = records[0]["fields"].get("UnitPrice", "不明")
-    print(f"✅ UnitPrice: {unitprice}")  # デバッグ
+    print(f"✅ UnitPrice: {unitprice}")
     return jsonify({"unitprice": unitprice})
 
+# -------------------------------
 # **Airtable へのデータ送信**
-def send_record_to_destination(dest_url, workcord, workname, workoutput, workprocess, unitprice, workday):
+def send_record_to_destination(dest_url, workcord, workname, bookname, workoutput, workprocess, unitprice, workday):
     data = {
         "fields": {
             "WorkCord": int(workcord),
             "WorkName": str(workname),
+            "BookName": str(bookname),
             "WorkOutput": int(workoutput),
             "WorkProcess": str(workprocess),
             "UnitPrice": float(unitprice),
@@ -170,10 +172,8 @@ def send_record_to_destination(dest_url, workcord, workname, workoutput, workpro
 # -------------------------------
 # **Flask のルート**
 @app.route("/", methods=["GET", "POST"])
-
 def index():
-
-    load_workcord_data()  # ✅ ここで最新データを取得するようにする
+    load_workcord_data()  # リクエスト毎に最新のデータをロード
     workprocess_list, unitprice_dict, error = get_workprocess_data()
     if error:
         flash(error, "error")
@@ -202,26 +202,33 @@ def index():
             flash("⚠ すべてのフィールドを入力してください！", "error")
             return redirect(url_for("index"))
 
+        # フォームから選択された workname の値は "WorkName||BookName" の形式
+        selected_option = request.form.get("workname", "").strip()
+        if not selected_option:
+            flash("⚠ 該当する WorkName の選択が必要です！", "error")
+            return redirect(url_for("index"))
+        try:
+            workname, bookname = selected_option.split("||")
+        except ValueError:
+            flash("⚠ WorkName の選択値に不正な形式が含まれています。", "error")
+            return redirect(url_for("index"))
+
         dest_table = f"TablePersonID_{selected_personid}"
         dest_url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{dest_table}"
 
-        workname = workcord_dict.get(workcd)
-        if not workname:
-            flash(f"⚠ WorkCD {workcd} のデータが見つかりません。", "error")
-            return redirect(url_for("index"))
-
+        # Airtable 送信用に単価を取得
         unitprice = unitprice_dict.get(workprocess, 0)
-        status_code, response_text = send_record_to_destination(dest_url, workcd, workname, workoutput, workprocess, unitprice, workday)
-
+        status_code, response_text = send_record_to_destination(
+            dest_url, workcd, workname, bookname, workoutput, workprocess, unitprice, workday
+        )
         flash(response_text, "success" if status_code == 200 else "error")
         return redirect(url_for("index"))
 
     return render_template("index.html",
                            workprocess_list=workprocess_list,
                            personid_list=PERSON_ID_LIST,
-                           personid_dict=PERSON_ID_DICT,  # PersonID の辞書を追加
+                           personid_dict=PERSON_ID_DICT,
                            selected_personid=selected_personid)
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))

@@ -64,7 +64,7 @@
 </head>
 <body>
     <div class="container">
-        <h2>Airtable 入力フォーム </h2>
+        <h2>Airtable 入力フォーム</h2>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div id="flash-message">
@@ -81,9 +81,9 @@
             <label for="personid">PersonID:</label>
             <select id="personid" name="personid" required>
                 {% for id, name in personid_dict.items() %}
-                   <option value="{{ id }}" {% if id == selected_personid %}selected{% endif %}>
-                   {{ id }} - {{ name }}
-                  </option>
+                    <option value="{{ id }}" {% if id|string == selected_personid|string %}selected{% endif %}>
+                        {{ id }} - {{ name }}
+                    </option>
                 {% endfor %}
             </select>
 
@@ -91,7 +91,10 @@
             <input type="text" id="workcd" name="workcd" required>
 
             <label for="workname">WorkName:</label>
-            <input type="text" id="workname" name="workname" readonly>
+            <!-- 入力された WorkCD に応じた選択肢を表示するため select 要素に変更 -->
+            <select id="workname" name="workname" required>
+                <option value="">該当する WorkName を選択してください</option>
+            </select>
 
             <label for="workprocess">WorkProcess:</label>
             <select id="workprocess" name="workprocess" required>
@@ -117,10 +120,11 @@
     <script>
     document.addEventListener("DOMContentLoaded", function () {
         const workcdInput = document.getElementById("workcd");
-        const worknameInput = document.getElementById("workname");
+        const worknameSelect = document.getElementById("workname");
         const workprocessSelect = document.getElementById("workprocess");
         const unitpriceInput = document.getElementById("unitprice");
 
+        // WorkCD 入力欄で Enter キーが押された際に該当する WorkName 選択肢を取得
         workcdInput.addEventListener("keypress", function (event) {
             if (event.key === "Enter") {
                 event.preventDefault();
@@ -128,6 +132,7 @@
             }
         });
 
+        // WorkProcess 選択時に単価を取得
         workprocessSelect.addEventListener("change", function () {
             fetchUnitPrice();
         });
@@ -135,18 +140,32 @@
         function fetchWorkName() {
             const workcd = workcdInput.value.trim();
             if (workcd === "") {
-                worknameInput.value = "";
+                worknameSelect.innerHTML = '<option value="">該当する WorkName を選択してください</option>';
                 return;
             }
             fetch(`/get_workname?workcd=${workcd}`)
                 .then(response => response.json())
                 .then(data => {
+                    worknameSelect.innerHTML = '';
                     if (data.error) {
                         alert(data.error);
-                        worknameInput.value = "";
-                    } else {
-                        worknameInput.value = data.workname;
+                        worknameSelect.innerHTML = '<option value="">該当する WorkName を選択してください</option>';
+                        return;
                     }
+                    if (data.options.length === 0) {
+                        worknameSelect.innerHTML = '<option value="">該当する WorkName が見つかりません</option>';
+                        return;
+                    }
+                    let defaultOption = document.createElement("option");
+                    defaultOption.value = "";
+                    defaultOption.textContent = "該当する WorkName を選択してください";
+                    worknameSelect.appendChild(defaultOption);
+                    data.options.forEach(option => {
+                        let opt = document.createElement("option");
+                        opt.value = option.value;  // "WorkName||BookName" 形式
+                        opt.textContent = option.display;  // 表示例: "作業名 (書籍名)"
+                        worknameSelect.appendChild(opt);
+                    });
                 })
                 .catch(error => console.error("エラー:", error));
         }
