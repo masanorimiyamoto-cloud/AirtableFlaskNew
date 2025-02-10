@@ -78,24 +78,19 @@ def load_workcord_data():
 # ✅ **WorkCD に対応する WorkName/BookName の選択肢を取得する API**
 @app.route("/get_workname", methods=["GET"])
 def get_workname():
+    # 最新のデータを必ず読み込む
+    load_workcord_data()
+    
     workcd = request.args.get("workcd", "").strip()
-    if not workcd.isdigit():
-        return jsonify({"options": [], "error": "⚠ WorkCD は数値で入力してください！"})
+    try:
+        workcd_num = int(workcd)
+        workcd_key = str(workcd_num)
+    except ValueError:
+        return jsonify({"worknames": [], "error": "⚠ WorkCD は数値で入力してください！"})
     
-    records = workcord_dict.get(workcd, [])
-    if not records:
-        return jsonify({"options": [], "error": ""})
-    
-    options = []
-    # 各レコードについて option を作成
-    for rec in records:
-        workname = rec.get("workname", "")
-        bookname = rec.get("bookname", "")
-        # value: 識別のために "WorkName||BookName" とする
-        value = f"{workname}||{bookname}"
-        display = f"{workname} ({bookname})" if bookname else workname
-        options.append({"value": value, "display": display})
-    return jsonify({"options": options, "error": ""})
+    records = workcord_dict.get(workcd_key, [])
+    return jsonify({"worknames": records, "error": ""})
+
 
 # -------------------------------
 # **TableWorkProcess のデータを取得**

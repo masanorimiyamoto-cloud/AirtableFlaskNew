@@ -64,7 +64,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>Airtable 入力フォーム</h2>
+    <h2>Airtable 入力フォーム 210.17</h2>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div id="flash-message">
@@ -120,6 +120,7 @@
     </form>
   </div>
 
+  <!-- index.html 内の JavaScript 部分抜粋 -->
   <script>
     document.addEventListener("DOMContentLoaded", function () {
       const workcdInput = document.getElementById("workcd");
@@ -127,26 +128,33 @@
       const fetchWorkNameButton = document.getElementById("fetchWorkNameButton");
       const workprocessSelect = document.getElementById("workprocess");
       const unitpriceInput = document.getElementById("unitprice");
-
-      // ボタン押下で WorkName の候補を取得
+    
+      // 「候補を取得」ボタン押下時に候補を取得
       fetchWorkNameButton.addEventListener("click", function () {
         fetchWorkNames();
       });
-
+    
       workprocessSelect.addEventListener("change", function () {
         fetchUnitPrice();
       });
-
+    
       function fetchWorkNames() {
         const workcd = workcdInput.value.trim();
-        // セレクトボックスを初期化
-        worknameSelect.innerHTML = '<option value="">該当する WorkName を選択してください</option>';
+        console.log("候補を取得: workcd =", workcd);
+        // ボタンのテキストをリセットし、ドロップダウンボックスの初期表示を「品名を選択してください。」に設定
+        fetchWorkNameButton.innerText = "候補を取得";
+        worknameSelect.innerHTML = '<option value="">品名を選択してください。</option>';
         if (workcd === "") {
           return;
         }
         fetch(`/get_workname?workcd=${workcd}`)
           .then(response => response.json())
           .then(data => {
+            console.log("取得結果:", data);
+            if (!data || typeof data.worknames === "undefined") {
+              alert("サーバからのレスポンスが不正です: " + JSON.stringify(data));
+              return;
+            }
             if (data.error) {
               alert(data.error);
               return;
@@ -156,17 +164,21 @@
               alert("該当する WorkName が見つかりません");
               return;
             }
+            // ボタンのテキストを「〇件見つかりました。」に更新
+            fetchWorkNameButton.innerText = records.length + "件見つかりました。";
+            // ドロップダウンボックスは初期表示が「品名を選択してください。」になっているので、
+            // それ以外のオプションを追加する
             records.forEach(record => {
               const option = document.createElement("option");
-              // value は "workname||bookname" の形式（※区切り文字 "||" は各文字列に含まれない前提）
+              // value は "workname||bookname" の形式
               option.value = record.workname + "||" + record.bookname;
-              option.text = record.workname + " (" + record.bookname + ")";
+              option.text = record.workname + (record.bookname ? " (" + record.bookname + ")" : "");
               worknameSelect.appendChild(option);
             });
           })
           .catch(error => console.error("エラー:", error));
       }
-
+    
       function fetchUnitPrice() {
         const workprocess = workprocessSelect.value;
         if (workprocess === "") {
@@ -185,6 +197,10 @@
           .catch(error => console.error("エラー:", error));
       }
     });
-  </script>
+    </script>
+    
+    
+    
+    
 </body>
 </html>
