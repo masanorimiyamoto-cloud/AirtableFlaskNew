@@ -9,8 +9,8 @@ app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
 # ✅ **Google Sheets 設定**
-#SERVICE_ACCOUNT_FILE = "configGooglesheet.json"  # Render の Secret File に保存済み
-SERVICE_ACCOUNT_FILE = r"C:\Users\user\OneDrive\SKY\pythonproject2025130\avid-keel-449310-n4-371c2abfe6fc.json"
+SERVICE_ACCOUNT_FILE = "configGooglesheet.json"  # Render の Secret File に保存済み
+#SERVICE_ACCOUNT_FILE = r"C:\Users\user\OneDrive\SKY\pythonproject2025130\avid-keel-449310-n4-371c2abfe6fc.json"
 SPREADSHEET_NAME = "AirtableTest129"
 WORKSHEET_NAME = "wsTableCD"  # ここに BookName フィールドも含む
 
