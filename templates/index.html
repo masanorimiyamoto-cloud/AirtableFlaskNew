@@ -1,190 +1,190 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Airtable 入力フォーム</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            text-align: center;
-            padding: 20px;
-        }
-        .container {
-            max-width: 400px;
-            margin: auto;
-            padding: 20px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-            text-align: left;
-        }
-        label {
-            font-weight: bold;
-            display: block;
-            margin-top: 10px;
-        }
-        input, select, button {
-            width: 100%;
-            padding: 10px;
-            margin-top: 5px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        button {
-            background-color: #007bff;
-            color: white;
-            font-size: 16px;
-            border: none;
-            cursor: pointer;
-            margin-top: 15px;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .message {
-            padding: 10px;
-            margin-top: 10px;
-            border-radius: 5px;
-            text-align: center;
-        }
-        .success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Airtable 入力フォーム</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      text-align: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 400px;
+      margin: auto;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+      text-align: left;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 10px;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      font-size: 16px;
+      border: none;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .message {
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 5px;
+      text-align: center;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Airtable 入力フォーム</h2>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div id="flash-message">
-                    {% for category, message in messages %}
-                        <p class="{{ category }}">{{ message }}</p>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div id="flash-message"><p style="color: gray;">新しいデータを入力してください</p></div>
-            {% endif %}
-        {% endwith %}
+  <div class="container">
+    <h2>Airtable 入力フォーム</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div id="flash-message">
+          {% for category, message in messages %}
+            <p class="{{ category }}">{{ message }}</p>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div id="flash-message"><p style="color: gray;">新しいデータを入力してください</p></div>
+      {% endif %}
+    {% endwith %}
 
-        <form method="POST">
-            <label for="personid">PersonID:</label>
-            <select id="personid" name="personid" required>
-                {% for id, name in personid_dict.items() %}
-                    <option value="{{ id }}" {% if id|string == selected_personid|string %}selected{% endif %}>
-                        {{ id }} - {{ name }}
-                    </option>
-                {% endfor %}
-            </select>
+    <form method="POST">
+      <label for="personid">PersonID:</label>
+      <select id="personid" name="personid" required>
+        {% for id, name in personid_dict.items() %}
+          <option value="{{ id }}" {% if id|string == selected_personid|string %}selected{% endif %}>
+            {{ id }} - {{ name }}
+          </option>
+        {% endfor %}
+      </select>
 
-            <label for="workcd">WorkCD:</label>
-            <input type="text" id="workcd" name="workcd" required>
+      <label for="workcd">WorkCD:</label>
+      <input type="text" id="workcd" name="workcd" required>
 
-            <label for="workname">WorkName:</label>
-            <!-- WorkName は取得した複数の候補から選択 -->
-            <select id="workname" name="workname" required>
-                <option value="">該当する WorkName を選択してください</option>
-            </select>
+      <!-- 新たに追加：WorkCD入力後に候補を取得するボタン -->
+      <button type="button" id="fetchWorkNameButton">候補を取得</button>
 
-            <label for="workprocess">WorkProcess:</label>
-            <select id="workprocess" name="workprocess" required>
-                <option value="">行程名を選択してください</option>
-                {% for item in workprocess_list %}
-                    <option value="{{ item }}">{{ item }}</option>
-                {% endfor %}
-            </select>
+      <label for="workname">WorkName:</label>
+      <!-- 取得した候補から選択 -->
+      <select id="workname" name="workname" required>
+        <option value="">該当する WorkName を選択してください</option>
+      </select>
 
-            <label for="unitprice">単価:</label>
-            <input type="text" id="unitprice" name="unitprice" readonly>
+      <label for="workprocess">WorkProcess:</label>
+      <select id="workprocess" name="workprocess" required>
+        <option value="">行程名を選択してください</option>
+        {% for item in workprocess_list %}
+          <option value="{{ item }}">{{ item }}</option>
+        {% endfor %}
+      </select>
 
-            <label for="workoutput">数量（個、分）:</label>
-            <input type="text" id="workoutput" name="workoutput" required>
+      <label for="unitprice">単価:</label>
+      <input type="text" id="unitprice" name="unitprice" readonly>
 
-            <label for="workday">作業日:</label>
-            <input type="date" id="workday" name="workday" required>
+      <label for="workoutput">数量（個、分）:</label>
+      <input type="text" id="workoutput" name="workoutput" required>
 
-            <button type="submit">送信</button>
-        </form>
-    </div>
+      <label for="workday">作業日:</label>
+      <input type="date" id="workday" name="workday" required>
 
-    <script>
+      <button type="submit">送信</button>
+    </form>
+  </div>
+
+  <script>
     document.addEventListener("DOMContentLoaded", function () {
-        const workcdInput = document.getElementById("workcd");
-        const worknameSelect = document.getElementById("workname");
-        const workprocessSelect = document.getElementById("workprocess");
-        const unitpriceInput = document.getElementById("unitprice");
+      const workcdInput = document.getElementById("workcd");
+      const worknameSelect = document.getElementById("workname");
+      const fetchWorkNameButton = document.getElementById("fetchWorkNameButton");
+      const workprocessSelect = document.getElementById("workprocess");
+      const unitpriceInput = document.getElementById("unitprice");
 
-        // リターンキーを押したときのみ WorkName を取得
-        workcdInput.addEventListener("keypress", function (event) {
-            if (event.key === "Enter") {
-                event.preventDefault();
-                fetchWorkNames();
-            }
-        });
-        // ※blur イベントによる自動取得は削除しました
+      // ボタン押下で WorkName の候補を取得
+      fetchWorkNameButton.addEventListener("click", function () {
+        fetchWorkNames();
+      });
 
-        workprocessSelect.addEventListener("change", function () {
-            fetchUnitPrice();
-        });
+      workprocessSelect.addEventListener("change", function () {
+        fetchUnitPrice();
+      });
 
-        function fetchWorkNames() {
-            const workcd = workcdInput.value.trim();
-            // セレクトボックスを初期化
-            worknameSelect.innerHTML = '<option value="">該当する WorkName を選択してください</option>';
-            if (workcd === "") {
-                return;
-            }
-            fetch(`/get_workname?workcd=${workcd}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        alert(data.error);
-                        return;
-                    }
-                    const records = data.worknames;
-                    if (records.length === 0) {
-                        alert("該当する WorkName が見つかりません");
-                        return;
-                    }
-                    records.forEach(record => {
-                        const option = document.createElement("option");
-                        // value は "workname||bookname" の形式（※区切り文字 "||" は各文字列に含まれない前提）
-                        option.value = record.workname + "||" + record.bookname;
-                        option.text = record.workname + " (" + record.bookname + ")";
-                        worknameSelect.appendChild(option);
-                    });
-                })
-                .catch(error => console.error("エラー:", error));
+      function fetchWorkNames() {
+        const workcd = workcdInput.value.trim();
+        // セレクトボックスを初期化
+        worknameSelect.innerHTML = '<option value="">該当する WorkName を選択してください</option>';
+        if (workcd === "") {
+          return;
         }
-
-        function fetchUnitPrice() {
-            const workprocess = workprocessSelect.value;
-            if (workprocess === "") {
-                unitpriceInput.value = "";
-                return;
+        fetch(`/get_workname?workcd=${workcd}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.error) {
+              alert(data.error);
+              return;
             }
-            fetch(`/get_unitprice?workprocess=${encodeURIComponent(workprocess)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        unitpriceInput.value = "";
-                    } else {
-                        unitpriceInput.value = data.unitprice;
-                    }
-                })
-                .catch(error => console.error("エラー:", error));
+            const records = data.worknames;
+            if (records.length === 0) {
+              alert("該当する WorkName が見つかりません");
+              return;
+            }
+            records.forEach(record => {
+              const option = document.createElement("option");
+              // value は "workname||bookname" の形式（※区切り文字 "||" は各文字列に含まれない前提）
+              option.value = record.workname + "||" + record.bookname;
+              option.text = record.workname + " (" + record.bookname + ")";
+              worknameSelect.appendChild(option);
+            });
+          })
+          .catch(error => console.error("エラー:", error));
+      }
+
+      function fetchUnitPrice() {
+        const workprocess = workprocessSelect.value;
+        if (workprocess === "") {
+          unitpriceInput.value = "";
+          return;
         }
+        fetch(`/get_unitprice?workprocess=${encodeURIComponent(workprocess)}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.error) {
+              unitpriceInput.value = "";
+            } else {
+              unitpriceInput.value = data.unitprice;
+            }
+          })
+          .catch(error => console.error("エラー:", error));
+      }
     });
-    </script>
+  </script>
 </body>
 </html>
