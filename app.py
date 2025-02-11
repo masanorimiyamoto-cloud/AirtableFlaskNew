@@ -213,8 +213,14 @@ def index():
     if request.method == "POST":
         workcd = request.form.get("workcd", "").strip()
         workoutput = request.form.get("workoutput", "").strip()
+        workoutput = request.form.get("workoutput", "").strip()
         workprocess = request.form.get("workprocess", "").strip()
         workday = request.form.get("workday", "").strip()
+
+        # WorkOutput が空の場合は "0" を設定
+        if workoutput == "":
+            workoutput = "0"
+
         if not selected_personid.isdigit() or int(selected_personid) not in personid_list:
             flash("⚠ 有効な PersonID を選択してください！", "error")
             return redirect(url_for("index"))
