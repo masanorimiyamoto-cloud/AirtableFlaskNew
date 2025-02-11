@@ -64,7 +64,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>Airtable 入力フォーム 211.23</h2>
+    <h2>Airtable 入力フォーム 211.23.30</h2>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div id="flash-message">
@@ -80,6 +80,7 @@
     <form method="POST">
       <label for="personid">PersonID:</label>
       <select id="personid" name="personid" required>
+        <option value="">PersonIDを選択してください</option>
         {% for id, name in personid_dict.items() %}
           <option value="{{ id }}" {% if id|string == selected_personid|string %}selected{% endif %}>
             {{ id }} - {{ name }}
@@ -111,11 +112,12 @@
       <input type="text" id="unitprice" name="unitprice" readonly>
 
       <label for="workoutput">数量（個、分）:</label>
-      <!-- required 属性を削除して空白送信を許可 -->
+      <!-- required 属性を削除し、空欄の場合はサーバー側で0とする -->
       <input type="text" id="workoutput" name="workoutput">
 
       <label for="workday">作業日:</label>
-      <input type="date" id="workday" name="workday" required>
+      <!-- 入力済みの日付があれば保持する -->
+      <input type="date" id="workday" name="workday" value="{{ workday|default('') }}" required>
 
       <button type="submit">送信</button>
     </form>
