@@ -11,9 +11,9 @@ app.secret_key = "supersecretkey"
 
 # ✅ Google Sheets 設定
 SERVICE_ACCOUNT_FILE = "configGooglesheet.json"  # Render の Secret File に保存済み
-#SERVICE_ACCOUNT_FILE = r"C:\Users\user\OneDrive\SKY\pythonproject2025130\avid-keel-449310-n4-371c2abfe6fc.json"
 SPREADSHEET_NAME = "AirtableTest129"
-WORKSHEET_NAME = "wsTableCD"  # ここに BookName フィールドも含む
+WORKSHEET_NAME = "wsTableCD"         # WorkCord/WorkName/BookName を含むシート
+PERSONID_WORKSHEET_NAME = "wsPersonID"  # PersonID/PersonName を含むシート
 
 # Google Sheets API 認証
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -30,7 +30,7 @@ AIRTABLE_BASE_ID = config["AIRTABLE_BASE_ID"]
 SOURCE_TABLE = "TableCD"
 TABLE_WORK_PROCESS = "TableWorkProcess"
 
-SOURCE_URL = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{SOURCE_TABLE}"
+#SOURCE_URL = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{SOURCE_TABLE}"
 WORK_PROCESS_URL = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{TABLE_WORK_PROCESS}"
 
 HEADERS = {
@@ -38,26 +38,48 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-# PersonID に対応する名前を辞書で管理
-PERSON_ID_DICT = {
-    15: "Aさん",
-    18: "Bさん",
-    24: "Cさん",
-    36: "Dさん",
-    108: "Eさん"
-}
+# ===== PersonID データ (Google Sheets から取得) =====
+PERSON_ID_DICT = {}
+PERSON_ID_LIST = []
+last_personid_load_time = 0
 
-# ID のリスト（選択用）
-PERSON_ID_LIST = list(PERSON_ID_DICT.keys())
+def load_personid_data():
+    """Google Sheets の wsPersonID から PersonID/PersonName を読み込み、グローバル変数を更新"""
+    global PERSON_ID_DICT, PERSON_ID_LIST, last_personid_load_time
+    try:
+        sheet = client.open(SPREADSHEET_NAME).worksheet(PERSONID_WORKSHEET_NAME)
+        records = sheet.get_all_records()  # 先頭行がヘッダーである前提 ("PersonID", "PersonName")
+        temp_dict = {}
+        for row in records:
+            pid = str(row.get("PersonID", "")).strip()
+            pname = str(row.get("PersonName", "")).strip()
+            if pid and pname:
+                try:
+                    pid_int = int(pid)
+                    temp_dict[pid_int] = pname
+                except ValueError:
+                    continue
+        PERSON_ID_DICT = temp_dict
+        PERSON_ID_LIST = list(PERSON_ID_DICT.keys())
+        last_personid_load_time = time.time()
+        print(f"✅ Google Sheets から {len(PERSON_ID_DICT)} 件の PersonID/PersonName レコードをロードしました！")
+    except Exception as e:
+        print(f"⚠ Google Sheets の PersonID データ取得に失敗: {e}")
 
-# ===== キャッシュ用 =====
-# workcord_dict は、キーが文字列の WorkCord、値が {"workname": <文字列>, "bookname": <文字列>} の辞書のリスト
+def get_cached_personid_data():
+    """TTL内であればキャッシュ済みの PersonID データを返し、超えていれば再読み込みする"""
+    global last_personid_load_time
+    if time.time() - last_personid_load_time > CACHE_TTL:
+        load_personid_data()
+    return PERSON_ID_DICT, PERSON_ID_LIST
+
+# ===== WorkCord/WorkName/BookName キャッシュ =====
 workcord_dict = {}
 last_workcord_load_time = 0
-CACHE_TTL = 300  # 300秒 (5分間) キャッシュを有効
+CACHE_TTL = 300  # 300秒 (5分間)
 
 def load_workcord_data():
-    """Google Sheets から WorkCord/WorkName/BookName のデータを読み込み、グローバルキャッシュを更新"""
+    """Google Sheets の wsTableCD から WorkCord/WorkName/BookName を読み込み、グローバルキャッシュを更新"""
     global workcord_dict, last_workcord_load_time
     workcord_dict = {}  # キャッシュ初期化
     try:
@@ -78,14 +100,14 @@ def load_workcord_data():
         print(f"⚠ Google Sheets のデータ取得に失敗: {e}")
 
 def get_cached_workcord_data():
-    """TTL内であればキャッシュ済みのデータを返し、超えていれば再読み込みする"""
+    """TTL内ならキャッシュ済みのデータを利用、超えていれば再読み込み"""
     global last_workcord_load_time
     if time.time() - last_workcord_load_time > CACHE_TTL:
         load_workcord_data()
     return workcord_dict
 
 # -------------------------------
-# ✅ WorkCD に対応する WorkName/BookName の選択肢を取得する API
+# WorkCD に対応する WorkName/BookName の選択肢を取得する API
 # ※ JavaScript 側では "/get_worknames" エンドポイントを呼び出す
 @app.route("/get_worknames", methods=["GET"])
 def get_worknames():
@@ -179,11 +201,15 @@ def send_record_to_destination(dest_url, workcord, workname, bookname, workoutpu
 def index():
     # キャッシュを利用して最新データを取得（TTL内なら再読み込みは行われません）
     get_cached_workcord_data()
+    personid_dict, personid_list = get_cached_personid_data()
     workprocess_list, unitprice_dict, error = get_workprocess_data()
     if error:
         flash(error, "error")
 
-    selected_personid = request.form.get("personid", "15")
+    selected_personid = request.form.get("personid", "")
+    if selected_personid == "":
+        # 初期表示時、personid_list があれば最初の値を選択
+        selected_personid = str(personid_list[0]) if personid_list else ""
 
     if request.method == "POST":
         workcd = request.form.get("workcd", "").strip()
@@ -191,7 +217,7 @@ def index():
         workprocess = request.form.get("workprocess", "").strip()
         workday = request.form.get("workday", "").strip()
 
-        if not selected_personid.isdigit() or int(selected_personid) not in PERSON_ID_LIST:
+        if not selected_personid.isdigit() or int(selected_personid) not in personid_list:
             flash("⚠ 有効な PersonID を選択してください！", "error")
             return redirect(url_for("index"))
 
@@ -231,8 +257,8 @@ def index():
 
     return render_template("index.html",
                            workprocess_list=workprocess_list,
-                           personid_list=PERSON_ID_LIST,
-                           personid_dict=PERSON_ID_DICT,
+                           personid_list=personid_list,
+                           personid_dict=personid_dict,
                            selected_personid=selected_personid)
 
 if __name__ == "__main__":
