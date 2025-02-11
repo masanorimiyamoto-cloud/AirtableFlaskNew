@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, flash, redirect, url_for, jsonify
+from flask import Flask, render_template, request, flash, redirect, url_for, jsonify, session
 import requests
 import gspread
 import json
@@ -39,6 +39,8 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
+CACHE_TTL = 300  # 300秒 (5分間)
+
 # ===== PersonID データ (Google Sheets から取得) =====
 PERSON_ID_DICT = {}
 PERSON_ID_LIST = []
@@ -76,7 +78,6 @@ def get_cached_personid_data():
 # ===== WorkCord/WorkName/BookName キャッシュ =====
 workcord_dict = {}
 last_workcord_load_time = 0
-CACHE_TTL = 300  # 300秒 (5分間)
 
 def load_workcord_data():
     """Google Sheets の wsTableCD から WorkCord/WorkName/BookName を読み込み、グローバルキャッシュを更新"""
@@ -206,6 +207,7 @@ def index():
     workprocess_list, unitprice_dict, error = get_workprocess_data()
     if error:
         flash(error, "error")
+        
     if request.method == "POST":
         selected_personid = request.form.get("personid", "").strip()
         workcd = request.form.get("workcd", "").strip()
@@ -223,7 +225,7 @@ def index():
             return render_template("index.html",
                                    personid_list=personid_list,
                                    personid_dict=personid_dict,
-                                   selected_personid=selected_personid,
+                                   selected_personid="",
                                    workprocess_list=workprocess_list,
                                    workday=workday)
         if not workcd.isdigit():
@@ -278,11 +280,14 @@ def index():
             dest_url, workcd, workname, bookname, workoutput, workprocess, unitprice, workday
         )
         flash(response_text, "success" if status_code == 200 else "error")
+        # セッションに前回入力された PersonID と作業日を保存
+        session['selected_personid'] = selected_personid
+        session['workday'] = workday
         return redirect(url_for("index"))
     else:
-        # GET時は、初期表示で PersonID を未選択、日付は空欄とする
-        selected_personid = ""
-        workday = ""
+        # GET時は、セッションに保存された値を利用（なければ空文字）
+        selected_personid = session.get('selected_personid', "")
+        workday = session.get('workday', "")
     return render_template("index.html",
                            workprocess_list=workprocess_list,
                            personid_list=personid_list,
