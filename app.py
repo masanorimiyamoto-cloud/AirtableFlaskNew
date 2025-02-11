@@ -14,13 +14,14 @@ SERVICE_ACCOUNT_FILE = "configGooglesheet.json"  # Render の Secret File に保
 SPREADSHEET_NAME = "AirtableTest129"
 WORKSHEET_NAME = "wsTableCD"         # WorkCord/WorkName/BookName を含むシート
 PERSONID_WORKSHEET_NAME = "wsPersonID"  # PersonID/PersonName を含むシート
+WORKPROCESS_WORKSHEET_NAME = "wsWorkProcess"  # WorkProcess/UnitPrice を含むシート
 
 # Google Sheets API 認証
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
 client = gspread.authorize(creds)
 
-# ==== Airtable 設定 ====
+# ==== Airtable 設定 (送信先用)
 with open("configAirtable.json", "r") as f:
     config = json.load(f)
 
@@ -28,10 +29,10 @@ AIRTABLE_TOKEN = config["AIRTABLE_TOKEN"]
 AIRTABLE_BASE_ID = config["AIRTABLE_BASE_ID"]
 
 SOURCE_TABLE = "TableCD"
-TABLE_WORK_PROCESS = "TableWorkProcess"
+# ※ TableWorkProcess は今後使用しない
 
 #SOURCE_URL = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{SOURCE_TABLE}"
-WORK_PROCESS_URL = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{TABLE_WORK_PROCESS}"
+# WORK_PROCESS_URL は削除可能（送信先には影響なし）
 
 HEADERS = {
     "Authorization": f"Bearer {AIRTABLE_TOKEN}",
@@ -48,7 +49,7 @@ def load_personid_data():
     global PERSON_ID_DICT, PERSON_ID_LIST, last_personid_load_time
     try:
         sheet = client.open(SPREADSHEET_NAME).worksheet(PERSONID_WORKSHEET_NAME)
-        records = sheet.get_all_records()  # 先頭行がヘッダーである前提 ("PersonID", "PersonName")
+        records = sheet.get_all_records()  # ヘッダー: "PersonID", "PersonName"
         temp_dict = {}
         for row in records:
             pid = str(row.get("PersonID", "")).strip()
@@ -68,7 +69,6 @@ def load_personid_data():
 
 def get_cached_personid_data():
     """TTL内であればキャッシュ済みの PersonID データを返し、超えていれば再読み込みする"""
-    global last_personid_load_time
     if time.time() - last_personid_load_time > CACHE_TTL:
         load_personid_data()
     return PERSON_ID_DICT, PERSON_ID_LIST
@@ -101,10 +101,46 @@ def load_workcord_data():
 
 def get_cached_workcord_data():
     """TTL内ならキャッシュ済みのデータを利用、超えていれば再読み込み"""
-    global last_workcord_load_time
     if time.time() - last_workcord_load_time > CACHE_TTL:
         load_workcord_data()
     return workcord_dict
+
+# ===== WorkProcess/UnitPrice データ (Google Sheets の wsWorkProcess から取得) =====
+workprocess_list_cache = []
+unitprice_dict_cache = {}
+last_workprocess_load_time = 0
+
+def load_workprocess_data():
+    """Google Sheets の wsWorkProcess から WorkProcess と UnitPrice を読み込み、キャッシュを更新"""
+    global workprocess_list_cache, unitprice_dict_cache, last_workprocess_load_time
+    try:
+        sheet = client.open(SPREADSHEET_NAME).worksheet(WORKPROCESS_WORKSHEET_NAME)
+        records = sheet.get_all_records()  # ヘッダー: "WorkProcess", "UnitPrice"
+        temp_list = []
+        temp_dict = {}
+        for row in records:
+            wp = str(row.get("WorkProcess", "")).strip()
+            up = row.get("UnitPrice", 0)
+            if wp:
+                temp_list.append(wp)
+                temp_dict[wp] = up
+        workprocess_list_cache = temp_list
+        unitprice_dict_cache = temp_dict
+        last_workprocess_load_time = time.time()
+        print(f"✅ Google Sheets から {len(temp_list)} 件の WorkProcess/UnitPrice レコードをロードしました！")
+    except Exception as e:
+        print(f"⚠ Google Sheets の wsWorkProcess データ取得に失敗: {e}")
+
+def get_cached_workprocess_data():
+    """TTL内であればキャッシュ済みの WorkProcess データを返し、超えていれば再読み込みする"""
+    if time.time() - last_workprocess_load_time > CACHE_TTL:
+        load_workprocess_data()
+    return workprocess_list_cache, unitprice_dict_cache
+
+def get_workprocess_data():
+    """WorkProcess と UnitPrice のデータを返す"""
+    wp_list, up_dict = get_cached_workprocess_data()
+    return wp_list, up_dict, None
 
 # -------------------------------
 # WorkCD に対応する WorkName/BookName の選択肢を取得する API
@@ -112,41 +148,14 @@ def get_cached_workcord_data():
 @app.route("/get_worknames", methods=["GET"])
 def get_worknames():
     data = get_cached_workcord_data()
-    
     workcd = request.args.get("workcd", "").strip()
     try:
         workcd_num = int(workcd)
         workcd_key = str(workcd_num)
     except ValueError:
         return jsonify({"worknames": [], "error": "⚠ WorkCD は数値で入力してください！"})
-    
     records = data.get(workcd_key, [])
     return jsonify({"worknames": records, "error": ""})
-
-# -------------------------------
-# TableWorkProcess のデータを取得
-def get_workprocess_data():
-    """Airtable の TableWorkProcess から WorkProcess と UnitPrice のデータを取得"""
-    try:
-        response = requests.get(WORK_PROCESS_URL, headers=HEADERS, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        records = data.get("records", [])
-
-        workprocess_list = []
-        unitprice_dict = {}
-
-        for record in records:
-            fields = record.get("fields", {})
-            workprocess = fields.get("WorkProcess")
-            unitprice = fields.get("UnitPrice", 0)
-            if workprocess:
-                workprocess_list.append(workprocess)
-                unitprice_dict[workprocess] = unitprice
-
-        return workprocess_list, unitprice_dict, None
-    except requests.RequestException as e:
-        return [], {}, f"⚠ データ取得エラー: {str(e)}"
 
 # -------------------------------
 # WorkProcess に対応する UnitPrice を取得する API
@@ -155,22 +164,14 @@ def get_unitprice():
     workprocess = request.args.get("workprocess", "").strip()
     if not workprocess:
         return jsonify({"error": "WorkProcess が指定されていません"}), 400
-
-    params = {"filterByFormula": f"{{WorkProcess}}='{workprocess}'"}
-    response = requests.get(WORK_PROCESS_URL, headers=HEADERS, params=params)
-
-    if response.status_code != 200:
-        print(f"⚠ エラー: {response.status_code}, {response.text}")
-        return jsonify({"error": "データ取得エラー"}), 500
-
-    data = response.json()
-    records = data.get("records", [])
-    
-    if not records:
+    wp_list, up_dict, error = get_workprocess_data()
+    if error:
+        print("⚠ wsWorkProcess データ取得エラー: ", error)
+        return jsonify({"error": error}), 500
+    if workprocess not in up_dict:
         print("⚠ 該当する WorkProcess が見つかりません")
         return jsonify({"error": "該当する WorkProcess が見つかりません"}), 404
-
-    unitprice = records[0]["fields"].get("UnitPrice", "不明")
+    unitprice = up_dict[workprocess]
     print(f"✅ UnitPrice: {unitprice}")
     return jsonify({"unitprice": unitprice})
 
@@ -205,34 +206,27 @@ def index():
     workprocess_list, unitprice_dict, error = get_workprocess_data()
     if error:
         flash(error, "error")
-
     selected_personid = request.form.get("personid", "")
     if selected_personid == "":
         # 初期表示時、personid_list があれば最初の値を選択
         selected_personid = str(personid_list[0]) if personid_list else ""
-
     if request.method == "POST":
         workcd = request.form.get("workcd", "").strip()
         workoutput = request.form.get("workoutput", "").strip()
         workprocess = request.form.get("workprocess", "").strip()
         workday = request.form.get("workday", "").strip()
-
         if not selected_personid.isdigit() or int(selected_personid) not in personid_list:
             flash("⚠ 有効な PersonID を選択してください！", "error")
             return redirect(url_for("index"))
-
         if not workcd.isdigit():
             flash("⚠ WorkCD は数値を入力してください！", "error")
             return redirect(url_for("index"))
-
         if not workoutput.isdigit():
             flash("⚠ WorkOutput は数値を入力してください！", "error")
             return redirect(url_for("index"))
-
         if not workprocess or not workday:
             flash("⚠ すべてのフィールドを入力してください！", "error")
             return redirect(url_for("index"))
-
         # フォームから選択された workname の値は "WorkName||BookName" の形式
         selected_option = request.form.get("workname", "").strip()
         if not selected_option:
@@ -243,10 +237,8 @@ def index():
         except ValueError:
             flash("⚠ WorkName の選択値に不正な形式が含まれています。", "error")
             return redirect(url_for("index"))
-
         dest_table = f"TablePersonID_{selected_personid}"
         dest_url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{dest_table}"
-
         # Airtable 送信用に単価を取得
         unitprice = unitprice_dict.get(workprocess, 0)
         status_code, response_text = send_record_to_destination(
@@ -254,7 +246,6 @@ def index():
         )
         flash(response_text, "success" if status_code == 200 else "error")
         return redirect(url_for("index"))
-
     return render_template("index.html",
                            workprocess_list=workprocess_list,
                            personid_list=personid_list,
