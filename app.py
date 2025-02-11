@@ -31,7 +31,7 @@ AIRTABLE_BASE_ID = config["AIRTABLE_BASE_ID"]
 SOURCE_TABLE = "TableCD"
 # ※ TableWorkProcess は今後使用しない
 
-#SOURCE_URL = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{SOURCE_TABLE}"
+SOURCE_URL = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{SOURCE_TABLE}"
 # WORK_PROCESS_URL は削除可能（送信先には影響なし）
 
 HEADERS = {
@@ -206,13 +206,9 @@ def index():
     workprocess_list, unitprice_dict, error = get_workprocess_data()
     if error:
         flash(error, "error")
-    selected_personid = request.form.get("personid", "")
-    if selected_personid == "":
-        # 初期表示時、personid_list があれば最初の値を選択
-        selected_personid = str(personid_list[0]) if personid_list else ""
     if request.method == "POST":
+        selected_personid = request.form.get("personid", "").strip()
         workcd = request.form.get("workcd", "").strip()
-        workoutput = request.form.get("workoutput", "").strip()
         workoutput = request.form.get("workoutput", "").strip()
         workprocess = request.form.get("workprocess", "").strip()
         workday = request.form.get("workday", "").strip()
@@ -221,42 +217,78 @@ def index():
         if workoutput == "":
             workoutput = "0"
 
+        # 各入力のバリデーション（エラー時は入力内容を保持して再表示）
         if not selected_personid.isdigit() or int(selected_personid) not in personid_list:
             flash("⚠ 有効な PersonID を選択してください！", "error")
-            return redirect(url_for("index"))
+            return render_template("index.html",
+                                   personid_list=personid_list,
+                                   personid_dict=personid_dict,
+                                   selected_personid=selected_personid,
+                                   workprocess_list=workprocess_list,
+                                   workday=workday)
         if not workcd.isdigit():
             flash("⚠ WorkCD は数値を入力してください！", "error")
-            return redirect(url_for("index"))
+            return render_template("index.html",
+                                   personid_list=personid_list,
+                                   personid_dict=personid_dict,
+                                   selected_personid=selected_personid,
+                                   workprocess_list=workprocess_list,
+                                   workday=workday)
         if not workoutput.isdigit():
             flash("⚠ WorkOutput は数値を入力してください！", "error")
-            return redirect(url_for("index"))
+            return render_template("index.html",
+                                   personid_list=personid_list,
+                                   personid_dict=personid_dict,
+                                   selected_personid=selected_personid,
+                                   workprocess_list=workprocess_list,
+                                   workday=workday)
         if not workprocess or not workday:
             flash("⚠ すべてのフィールドを入力してください！", "error")
-            return redirect(url_for("index"))
-        # フォームから選択された workname の値は "WorkName||BookName" の形式
+            return render_template("index.html",
+                                   personid_list=personid_list,
+                                   personid_dict=personid_dict,
+                                   selected_personid=selected_personid,
+                                   workprocess_list=workprocess_list,
+                                   workday=workday)
+
         selected_option = request.form.get("workname", "").strip()
         if not selected_option:
             flash("⚠ 該当する WorkName の選択が必要です！", "error")
-            return redirect(url_for("index"))
+            return render_template("index.html",
+                                   personid_list=personid_list,
+                                   personid_dict=personid_dict,
+                                   selected_personid=selected_personid,
+                                   workprocess_list=workprocess_list,
+                                   workday=workday)
         try:
             workname, bookname = selected_option.split("||")
         except ValueError:
             flash("⚠ WorkName の選択値に不正な形式が含まれています。", "error")
-            return redirect(url_for("index"))
+            return render_template("index.html",
+                                   personid_list=personid_list,
+                                   personid_dict=personid_dict,
+                                   selected_personid=selected_personid,
+                                   workprocess_list=workprocess_list,
+                                   workday=workday)
+
         dest_table = f"TablePersonID_{selected_personid}"
         dest_url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{dest_table}"
-        # Airtable 送信用に単価を取得
         unitprice = unitprice_dict.get(workprocess, 0)
         status_code, response_text = send_record_to_destination(
             dest_url, workcd, workname, bookname, workoutput, workprocess, unitprice, workday
         )
         flash(response_text, "success" if status_code == 200 else "error")
         return redirect(url_for("index"))
+    else:
+        # GET時は、初期表示で PersonID を未選択、日付は空欄とする
+        selected_personid = ""
+        workday = ""
     return render_template("index.html",
                            workprocess_list=workprocess_list,
                            personid_list=personid_list,
                            personid_dict=personid_dict,
-                           selected_personid=selected_personid)
+                           selected_personid=selected_personid,
+                           workday=workday)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
