@@ -64,7 +64,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>Airtable 入力フォーム 211.17</h2>
+    <h2>Airtable 入力フォーム 211.23</h2>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div id="flash-message">
@@ -111,7 +111,8 @@
       <input type="text" id="unitprice" name="unitprice" readonly>
 
       <label for="workoutput">数量（個、分）:</label>
-      <input type="text" id="workoutput" name="workoutput" required>
+      <!-- required 属性を削除して空白送信を許可 -->
+      <input type="text" id="workoutput" name="workoutput">
 
       <label for="workday">作業日:</label>
       <input type="date" id="workday" name="workday" required>
