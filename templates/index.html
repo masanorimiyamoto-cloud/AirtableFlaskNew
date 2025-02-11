@@ -64,7 +64,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>Airtable 入力フォーム 210.17</h2>
+    <h2>Airtable 入力フォーム 211.17</h2>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div id="flash-message">
@@ -141,13 +141,14 @@
       function fetchWorkNames() {
         const workcd = workcdInput.value.trim();
         console.log("候補を取得: workcd =", workcd);
-        // ボタンのテキストをリセットし、ドロップダウンボックスの初期表示を「品名を選択してください。」に設定
+        // ボタンのテキストをリセットし、ドロップダウンボックスの初期表示を設定
         fetchWorkNameButton.innerText = "候補を取得";
         worknameSelect.innerHTML = '<option value="">品名を選択してください。</option>';
         if (workcd === "") {
           return;
         }
-        fetch(`/get_workname?workcd=${workcd}`)
+        // エンドポイント名を "/get_worknames" に修正
+        fetch(`/get_worknames?workcd=${workcd}`)
           .then(response => response.json())
           .then(data => {
             console.log("取得結果:", data);
@@ -164,13 +165,10 @@
               alert("該当する WorkName が見つかりません");
               return;
             }
-            // ボタンのテキストを「〇件見つかりました。」に更新
+            // ボタンのテキストを更新
             fetchWorkNameButton.innerText = records.length + "件見つかりました。";
-            // ドロップダウンボックスは初期表示が「品名を選択してください。」になっているので、
-            // それ以外のオプションを追加する
             records.forEach(record => {
               const option = document.createElement("option");
-              // value は "workname||bookname" の形式
               option.value = record.workname + "||" + record.bookname;
               option.text = record.workname + (record.bookname ? " (" + record.bookname + ")" : "");
               worknameSelect.appendChild(option);
@@ -197,7 +195,8 @@
           .catch(error => console.error("エラー:", error));
       }
     });
-    </script>
+  </script>
+  
     
     
     
