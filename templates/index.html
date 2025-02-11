@@ -90,7 +90,7 @@
       <label for="workcd">WorkCD:</label>
       <input type="text" id="workcd" name="workcd" required>
 
-      <!-- 新たに追加：WorkCD入力後に候補を取得するボタン -->
+      <!-- WorkCD入力後に候補を取得するボタン -->
       <button type="button" id="fetchWorkNameButton">候補を取得</button>
 
       <label for="workname">WorkName:</label>
@@ -120,7 +120,7 @@
     </form>
   </div>
 
-  <!-- index.html 内の JavaScript 部分抜粋 -->
+  <!-- JavaScript 部分 -->
   <script>
     document.addEventListener("DOMContentLoaded", function () {
       const workcdInput = document.getElementById("workcd");
@@ -128,26 +128,26 @@
       const fetchWorkNameButton = document.getElementById("fetchWorkNameButton");
       const workprocessSelect = document.getElementById("workprocess");
       const unitpriceInput = document.getElementById("unitprice");
-    
+
       // 「候補を取得」ボタン押下時に候補を取得
       fetchWorkNameButton.addEventListener("click", function () {
         fetchWorkNames();
       });
-    
+
       workprocessSelect.addEventListener("change", function () {
         fetchUnitPrice();
       });
-    
+
       function fetchWorkNames() {
         const workcd = workcdInput.value.trim();
         console.log("候補を取得: workcd =", workcd);
-        // ボタンのテキストをリセットし、ドロップダウンボックスの初期表示を設定
+        // ボタンのテキストとドロップダウンの初期表示をリセット
         fetchWorkNameButton.innerText = "候補を取得";
         worknameSelect.innerHTML = '<option value="">品名を選択してください。</option>';
         if (workcd === "") {
           return;
         }
-        // エンドポイント名を "/get_worknames" に修正
+        // エンドポイント名は "/get_worknames"（app.py のエンドポイントと一致）
         fetch(`/get_worknames?workcd=${workcd}`)
           .then(response => response.json())
           .then(data => {
@@ -176,7 +176,7 @@
           })
           .catch(error => console.error("エラー:", error));
       }
-    
+
       function fetchUnitPrice() {
         const workprocess = workprocessSelect.value;
         if (workprocess === "") {
@@ -196,10 +196,5 @@
       }
     });
   </script>
-  
-    
-    
-    
-    
 </body>
 </html>

@@ -3,18 +3,19 @@ import requests
 import gspread
 import json
 import os
+import time
 from oauth2client.service_account import ServiceAccountCredentials
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
-# ✅ **Google Sheets 設定**
+# ✅ Google Sheets 設定
 SERVICE_ACCOUNT_FILE = "configGooglesheet.json"  # Render の Secret File に保存済み
 #SERVICE_ACCOUNT_FILE = r"C:\Users\user\OneDrive\SKY\pythonproject2025130\avid-keel-449310-n4-371c2abfe6fc.json"
 SPREADSHEET_NAME = "AirtableTest129"
 WORKSHEET_NAME = "wsTableCD"  # ここに BookName フィールドも含む
 
-# **Google Sheets API 認証**
+# Google Sheets API 認証
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
 client = gspread.authorize(creds)
@@ -49,18 +50,19 @@ PERSON_ID_DICT = {
 # ID のリスト（選択用）
 PERSON_ID_LIST = list(PERSON_ID_DICT.keys())
 
-# **キャッシュ用の辞書**
-# workcord_dict は、キーが文字列の WorkCord、値が {workname, bookname} の辞書のリストとなる
+# ===== キャッシュ用 =====
+# workcord_dict は、キーが文字列の WorkCord、値が {"workname": <文字列>, "bookname": <文字列>} の辞書のリスト
 workcord_dict = {}
+last_workcord_load_time = 0
+CACHE_TTL = 300  # 300秒 (5分間) キャッシュを有効
 
 def load_workcord_data():
-    global workcord_dict
-    workcord_dict = {}  # 初期化
-
+    """Google Sheets から WorkCord/WorkName/BookName のデータを読み込み、グローバルキャッシュを更新"""
+    global workcord_dict, last_workcord_load_time
+    workcord_dict = {}  # キャッシュ初期化
     try:
         sheet = client.open(SPREADSHEET_NAME).worksheet(WORKSHEET_NAME)
-        # シート内すべてのデータを取得（各行は辞書）
-        records = sheet.get_all_records()
+        records = sheet.get_all_records()  # 各行は辞書
         for row in records:
             workcord = str(row.get("WorkCord", "")).strip()
             workname = str(row.get("WorkName", "")).strip()
@@ -71,15 +73,23 @@ def load_workcord_data():
                 workcord_dict[workcord].append({"workname": workname, "bookname": bookname})
         total_records = sum(len(lst) for lst in workcord_dict.values())
         print(f"✅ Google Sheets から {total_records} 件の WorkCD/WorkName/BookName レコードをロードしました！")
+        last_workcord_load_time = time.time()
     except Exception as e:
         print(f"⚠ Google Sheets のデータ取得に失敗: {e}")
 
+def get_cached_workcord_data():
+    """TTL内であればキャッシュ済みのデータを返し、超えていれば再読み込みする"""
+    global last_workcord_load_time
+    if time.time() - last_workcord_load_time > CACHE_TTL:
+        load_workcord_data()
+    return workcord_dict
+
 # -------------------------------
-# ✅ **WorkCD に対応する WorkName/BookName の選択肢を取得する API**
-@app.route("/get_workname", methods=["GET"])
-def get_workname():
-    # 最新のデータを必ず読み込む
-    load_workcord_data()
+# ✅ WorkCD に対応する WorkName/BookName の選択肢を取得する API
+# ※ JavaScript 側では "/get_worknames" エンドポイントを呼び出す
+@app.route("/get_worknames", methods=["GET"])
+def get_worknames():
+    data = get_cached_workcord_data()
     
     workcd = request.args.get("workcd", "").strip()
     try:
@@ -88,12 +98,11 @@ def get_workname():
     except ValueError:
         return jsonify({"worknames": [], "error": "⚠ WorkCD は数値で入力してください！"})
     
-    records = workcord_dict.get(workcd_key, [])
+    records = data.get(workcd_key, [])
     return jsonify({"worknames": records, "error": ""})
 
-
 # -------------------------------
-# **TableWorkProcess のデータを取得**
+# TableWorkProcess のデータを取得
 def get_workprocess_data():
     """Airtable の TableWorkProcess から WorkProcess と UnitPrice のデータを取得"""
     try:
@@ -144,7 +153,7 @@ def get_unitprice():
     return jsonify({"unitprice": unitprice})
 
 # -------------------------------
-# **Airtable へのデータ送信**
+# Airtable へのデータ送信
 def send_record_to_destination(dest_url, workcord, workname, bookname, workoutput, workprocess, unitprice, workday):
     data = {
         "fields": {
@@ -165,10 +174,11 @@ def send_record_to_destination(dest_url, workcord, workname, bookname, workoutpu
         return None, f"⚠ 送信エラー: {str(e)}"
 
 # -------------------------------
-# **Flask のルート**
+# Flask のルート
 @app.route("/", methods=["GET", "POST"])
 def index():
-    load_workcord_data()  # リクエスト毎に最新のデータをロード
+    # キャッシュを利用して最新データを取得（TTL内なら再読み込みは行われません）
+    get_cached_workcord_data()
     workprocess_list, unitprice_dict, error = get_workprocess_data()
     if error:
         flash(error, "error")
