@@ -64,7 +64,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>Airtable 入力フォーム 211.23.30</h2>
+    <h2>Airtable 入力フォーム 211.2345</h2>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div id="flash-message">
@@ -80,9 +80,9 @@
     <form method="POST">
       <label for="personid">PersonID:</label>
       <select id="personid" name="personid" required>
-        <option value="">PersonIDを選択してください</option>
+        <option value="" {% if not selected_personid %}selected{% endif %}>PersonIDを選択してください</option>
         {% for id, name in personid_dict.items() %}
-          <option value="{{ id }}" {% if id|string == selected_personid|string %}selected{% endif %}>
+          <option value="{{ id }}" {% if selected_personid and id|string == selected_personid|string %}selected{% endif %}>
             {{ id }} - {{ name }}
           </option>
         {% endfor %}
@@ -116,8 +116,8 @@
       <input type="text" id="workoutput" name="workoutput">
 
       <label for="workday">作業日:</label>
-      <!-- 入力済みの日付があれば保持する -->
-      <input type="date" id="workday" name="workday" value="{{ workday|default('') }}" required>
+      <!-- 入力済みの日付があればその値を設定、なければvalue属性は出力しない -->
+      <input type="date" id="workday" name="workday" {% if workday %}value="{{ workday }}"{% endif %} required>
 
       <button type="submit">送信</button>
     </form>
@@ -166,38 +166,4 @@
             const records = data.worknames;
             if (records.length === 0) {
               alert("該当する WorkName が見つかりません");
-              return;
-            }
-            // ボタンのテキストを更新
-            fetchWorkNameButton.innerText = records.length + "件見つかりました。";
-            records.forEach(record => {
-              const option = document.createElement("option");
-              option.value = record.workname + "||" + record.bookname;
-              option.text = record.workname + (record.bookname ? " (" + record.bookname + ")" : "");
-              worknameSelect.appendChild(option);
-            });
-          })
-          .catch(error => console.error("エラー:", error));
-      }
-
-      function fetchUnitPrice() {
-        const workprocess = workprocessSelect.value;
-        if (workprocess === "") {
-          unitpriceInput.value = "";
-          return;
-        }
-        fetch(`/get_unitprice?workprocess=${encodeURIComponent(workprocess)}`)
-          .then(response => response.json())
-          .then(data => {
-            if (data.error) {
-              unitpriceInput.value = "";
-            } else {
-              unitpriceInput.value = data.unitprice;
-            }
-          })
-          .catch(error => console.error("エラー:", error));
-      }
-    });
-  </script>
-</body>
-</html>
+              re
