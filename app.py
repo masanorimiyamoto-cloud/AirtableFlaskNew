@@ -5,13 +5,15 @@ import json
 import os
 import time
 from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime, date
+from datetime import datetime, date, timedelta  # ← timedelta を追加
+
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
 # ✅ Google Sheets 設定
 SERVICE_ACCOUNT_FILE = "configGooglesheet.json"  # Render の Secret File に保存済み
+
 SPREADSHEET_NAME = "AirtableTest129"
 WORKSHEET_NAME = "wsTableCD"         # WorkCord/WorkName/BookName を含むシート
 PERSONID_WORKSHEET_NAME = "wsPersonID"  # PersonID/PersonName を含むシート
@@ -197,29 +199,41 @@ def send_record_to_destination(dest_url, workcord, workname, bookname, workoutpu
         return response.status_code, "✅ Airtable にデータを送信しました！"
     except requests.RequestException as e:
         return None, f"⚠ 送信エラー: {str(e)}"
-# 🆕 **現在選択されている PersonID のデータのみ取得**
-def get_current_month_records():
-    """現在選択中の PersonID のみのデータを取得"""
+# 🆕 **カレンダーで選択されている月のデータを取得**
+def get_selected_month_records():
+    """ユーザーがカレンダーで選択した月のデータを取得"""
+
     selected_personid = session.get("selected_personid")
+    selected_workday = session.get("workday")
+
     if not selected_personid:
+        app.logger.warning("⚠ 選択された PersonID がありません。データ取得をスキップします。")
         return []  # PersonID が未選択なら何も取得しない
 
-    today = date.today()  # datetime.today() → date.today()
-    first_day = today.replace(day=1).strftime("%Y-%m-%d")
-    last_day = today.strftime("%Y-%m-%d")
-
-    params = {
-        "filterByFormula": f"AND(IS_AFTER({{WorkDay}}, '{first_day}'), IS_BEFORE({{WorkDay}}, '{last_day}'))"
-    }
-
-    table_name = f"TablePersonID_{selected_personid}"
-    records = []
-
     try:
+        if selected_workday:
+            # ユーザーが選択した日付から「年・月」を抽出
+            selected_date = datetime.strptime(selected_workday, "%Y-%m-%d")
+        else:
+            # 何も選択されていない場合は今月をデフォルト
+            selected_date = date.today()
+
+        selected_year = selected_date.year
+        selected_month = selected_date.month
+
+        # ✅ `filterByFormula` を `YEAR(WorkDay)` と `MONTH(WorkDay)` でシンプルに
+        params = {
+            "filterByFormula": f"AND(YEAR({{WorkDay}})={selected_year}, MONTH({{WorkDay}})={selected_month})"
+        }
+
+        table_name = f"TablePersonID_{selected_personid}"
+        app.logger.info(f"📡 Airtable からデータ取得開始: {table_name}（{selected_year}-{selected_month}）")
+
         response = requests.get(f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{table_name}", headers=HEADERS, params=params)
         response.raise_for_status()
         data = response.json().get("records", [])
 
+        records = []
         for record in data:
             fields = record.get("fields", {})
             records.append({
@@ -230,15 +244,17 @@ def get_current_month_records():
                 "WorkDay": fields.get("WorkDay", "不明")
             })
 
-    except requests.RequestException as e:
-        print(f"⚠ Airtable データ取得エラー (TablePersonID_{selected_personid}): {e}")
+        app.logger.info(f"✅ {len(records)} 件のデータを取得しました")
+        return records
 
-    return records
+    except requests.RequestException as e:
+        app.logger.error(f"❌ Airtable データ取得エラー (TablePersonID_{selected_personid}): {e}")
+        return []
 
 # 🆕 **一覧表示のルート**
 @app.route("/records")
 def records():
-    records = get_current_month_records()
+    records = get_selected_month_records()
     return render_template("records.html", records=records)
 # -------------------------------
 # Flask のルート
