@@ -240,6 +240,7 @@ def get_selected_month_records():
                 "WorkCD": fields.get("WorkCord", "不明"),
                 "WorkName": fields.get("WorkName", "不明"),
                 "WorkProcess": fields.get("WorkProcess", "不明"),
+                "UnitPrice": fields.get("UnitPrice", "不明"),  # ✅ UnitPrice を追加
                 "WorkOutput": fields.get("WorkOutput", "0"),
                 "WorkDay": fields.get("WorkDay", "不明")
             })
