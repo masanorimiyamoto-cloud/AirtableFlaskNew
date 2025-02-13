@@ -5,6 +5,7 @@ import json
 import os
 import time
 from oauth2client.service_account import ServiceAccountCredentials
+from datetime import datetime, date
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -196,7 +197,49 @@ def send_record_to_destination(dest_url, workcord, workname, bookname, workoutpu
         return response.status_code, "✅ Airtable にデータを送信しました！"
     except requests.RequestException as e:
         return None, f"⚠ 送信エラー: {str(e)}"
+# 🆕 **現在選択されている PersonID のデータのみ取得**
+def get_current_month_records():
+    """現在選択中の PersonID のみのデータを取得"""
+    selected_personid = session.get("selected_personid")
+    if not selected_personid:
+        return []  # PersonID が未選択なら何も取得しない
 
+    today = date.today()  # datetime.today() → date.today()
+    first_day = today.replace(day=1).strftime("%Y-%m-%d")
+    last_day = today.strftime("%Y-%m-%d")
+
+    params = {
+        "filterByFormula": f"AND(IS_AFTER({{WorkDay}}, '{first_day}'), IS_BEFORE({{WorkDay}}, '{last_day}'))"
+    }
+
+    table_name = f"TablePersonID_{selected_personid}"
+    records = []
+
+    try:
+        response = requests.get(f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{table_name}", headers=HEADERS, params=params)
+        response.raise_for_status()
+        data = response.json().get("records", [])
+
+        for record in data:
+            fields = record.get("fields", {})
+            records.append({
+                "WorkCD": fields.get("WorkCord", "不明"),
+                "WorkName": fields.get("WorkName", "不明"),
+                "WorkProcess": fields.get("WorkProcess", "不明"),
+                "WorkOutput": fields.get("WorkOutput", "0"),
+                "WorkDay": fields.get("WorkDay", "不明")
+            })
+
+    except requests.RequestException as e:
+        print(f"⚠ Airtable データ取得エラー (TablePersonID_{selected_personid}): {e}")
+
+    return records
+
+# 🆕 **一覧表示のルート**
+@app.route("/records")
+def records():
+    records = get_current_month_records()
+    return render_template("records.html", records=records)
 # -------------------------------
 # Flask のルート
 @app.route("/", methods=["GET", "POST"])
