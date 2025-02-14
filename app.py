@@ -264,25 +264,31 @@ def edit_record(record_id):
         updated_data = {
             "fields": {
                 "WorkDay": request.form.get("WorkDay"),
-                "WorkCord": request.form.get("WorkCD"),
-                "WorkName": request.form.get("WorkName"),
-                "WorkProcess": request.form.get("WorkProcess"),
-                "UnitPrice": request.form.get("UnitPrice"),
-                "WorkOutput": request.form.get("WorkOutput"),
+                "WorkOutput": int(request.form.get("WorkOutput", 0)),  # ✅ 数値変換
             }
         }
-        response = requests.patch(f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{table_name}/{record_id}", headers=HEADERS, json=updated_data)
+
+        # ✅ Airtable に PATCH リクエストを送信（WorkDay, WorkOutput のみ）
+        response = requests.patch(f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{table_name}/{record_id}",
+                                  headers=HEADERS, json=updated_data)
+        
         if response.status_code == 200:
             flash("✅ レコードを更新しました！", "success")
         else:
-            flash("❌ 更新に失敗しました。", "error")
+            error_message = response.json()
+            flash(f"❌ 更新に失敗しました: {error_message}", "error")
+            print(f"❌ Airtable 更新エラー: {error_message}")  # ログ出力
 
         return redirect(url_for("records"))
 
-    response = requests.get(f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{table_name}/{record_id}", headers=HEADERS)
-    record = response.json().get("fields", {})
+    # ✅ GETリクエスト時（編集フォームを開く）
+    response = requests.get(f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{table_name}/{record_id}",
+                            headers=HEADERS)
+    record_data = response.json().get("fields", {})
 
-    return render_template("edit_record.html", record=record, record_id=record_id)
+    return render_template("edit_record.html", record=record_data, record_id=record_id)
+
+
 
 # 🆕 **一覧表示のルート**
 @app.route("/records")
