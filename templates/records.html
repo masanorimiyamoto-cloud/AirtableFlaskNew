@@ -49,35 +49,38 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>カレンダー月の入力データ</h2>
+    <<div class="container">
+        <h2>{{ personid }} の {{ display_month }} の一覧</h2>
+    
         {% if records %}
             <table>
                 <thead>
                     <tr>
+                        <th>WorkDay</th>
                         <th>WorkCD</th>
                         <th>WorkName</th>
                         <th>WorkProcess</th>
                         <th>UnitPrice</th>  <!-- ✅ UnitPrice を追加 -->
                         <th>WorkOutput</th>
-                        <th>WorkDay</th>
+                
                     </tr>
                 </thead>
                 <tbody>
                     {% for record in records %}
                         <tr>
+                            <td>{{ record.WorkDay }}</td>
                             <td>{{ record.WorkCD }}</td>
                             <td>{{ record.WorkName }}</td>
                             <td>{{ record.WorkProcess }}</td>
                             <td>{{ record.UnitPrice }}</td>  <!-- ✅ UnitPrice を表示 -->
                             <td>{{ record.WorkOutput }}</td>
-                            <td>{{ record.WorkDay }}</td>
+                            
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
         {% else %}
-            <p>カレンダー月のデータはありません。</p>
+            <p>{{ personid }} の {{ display_month }} のデータはありません。</p>
         {% endif %}
         <br>
         <button onclick="location.href='/'">戻る</button>

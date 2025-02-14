@@ -256,7 +256,16 @@ def get_selected_month_records():
 @app.route("/records")
 def records():
     records = get_selected_month_records()
-    return render_template("records.html", records=records)
+    
+    selected_personid = session.get("selected_personid", "未選択")
+    selected_workday = session.get("workday", date.today().strftime("%Y-%m-%d"))
+    
+    # 選択された日付から「YYYY年MM月」を取得
+    selected_date = datetime.strptime(selected_workday, "%Y-%m-%d")
+    display_month = f"{selected_date.year}年{selected_date.month}月"
+
+    return render_template("records.html", records=records, personid=selected_personid, display_month=display_month)
+
 # -------------------------------
 # Flask のルート
 @app.route("/", methods=["GET", "POST"])
