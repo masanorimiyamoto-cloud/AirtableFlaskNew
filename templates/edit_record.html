@@ -25,13 +25,19 @@
             display: block;
             margin-top: 10px;
         }
-        input, select, button {
+        input, button {
             width: 100%;
             padding: 10px;
             margin-top: 5px;
             border: 1px solid #ccc;
             border-radius: 5px;
             font-size: 16px;
+        }
+        /* 修正不可のフィールドをグレーアウト */
+        input[readonly] {
+            background-color: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
         }
         button {
             background-color: #007bff;
@@ -60,16 +66,16 @@
             <input type="date" id="WorkDay" name="WorkDay" value="{{ record.WorkDay }}" required>
 
             <label for="WorkCD">WorkCD:</label>
-            <input type="text" id="WorkCD" name="WorkCD" value="{{ record.WorkCord }}" required>
+            <input type="text" id="WorkCD" name="WorkCD" value="{{ record.WorkCord }}" readonly>
 
             <label for="WorkName">WorkName:</label>
-            <input type="text" id="WorkName" name="WorkName" value="{{ record.WorkName }}" required>
+            <input type="text" id="WorkName" name="WorkName" value="{{ record.WorkName }}" readonly>
 
             <label for="WorkProcess">WorkProcess:</label>
-            <input type="text" id="WorkProcess" name="WorkProcess" value="{{ record.WorkProcess }}" required>
+            <input type="text" id="WorkProcess" name="WorkProcess" value="{{ record.WorkProcess }}" readonly>
 
             <label for="UnitPrice">UnitPrice:</label>
-            <input type="text" id="UnitPrice" name="UnitPrice" value="{{ record.UnitPrice }}" required>
+            <input type="text" id="UnitPrice" name="UnitPrice" value="{{ record.UnitPrice }}" readonly>
 
             <label for="WorkOutput">WorkOutput:</label>
             <input type="text" id="WorkOutput" name="WorkOutput" value="{{ record.WorkOutput }}" required>
