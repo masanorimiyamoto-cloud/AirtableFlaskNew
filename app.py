@@ -221,7 +221,7 @@ def get_selected_month_records():
         selected_year = selected_date.year
         selected_month = selected_date.month
 
-        # ✅ `filterByFormula` を `YEAR(WorkDay)` と `MONTH(WorkDay)` でシンプルに
+        # ✅ `filterByFormula` を `YEAR()` と `MONTH()` でシンプルに
         params = {
             "filterByFormula": f"AND(YEAR({{WorkDay}})={selected_year}, MONTH({{WorkDay}})={selected_month})"
         }
@@ -237,20 +237,24 @@ def get_selected_month_records():
         for record in data:
             fields = record.get("fields", {})
             records.append({
+                "WorkDay": fields.get("WorkDay", "9999-12-31"),  # WorkDay が空なら最後に並ぶように
                 "WorkCD": fields.get("WorkCord", "不明"),
                 "WorkName": fields.get("WorkName", "不明"),
                 "WorkProcess": fields.get("WorkProcess", "不明"),
-                "UnitPrice": fields.get("UnitPrice", "不明"),  # ✅ UnitPrice を追加
+                "UnitPrice": fields.get("UnitPrice", "不明"),
                 "WorkOutput": fields.get("WorkOutput", "0"),
-                "WorkDay": fields.get("WorkDay", "不明")
             })
 
-        app.logger.info(f"✅ {len(records)} 件のデータを取得しました")
+        # ✅ WorkDay で昇順ソート（YYYY-MM-DDのフォーマットを想定）
+        records.sort(key=lambda x: x["WorkDay"])
+
+        app.logger.info(f"✅ {len(records)} 件のデータを取得し、WorkDay で並び替えました")
         return records
 
     except requests.RequestException as e:
         app.logger.error(f"❌ Airtable データ取得エラー (TablePersonID_{selected_personid}): {e}")
         return []
+
 
 # 🆕 **一覧表示のルート**
 @app.route("/records")
