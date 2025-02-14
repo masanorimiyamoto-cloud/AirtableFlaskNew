@@ -200,61 +200,89 @@ def send_record_to_destination(dest_url, workcord, workname, bookname, workoutpu
     except requests.RequestException as e:
         return None, f"⚠ 送信エラー: {str(e)}"
 # 🆕 **カレンダーで選択されている月のデータを取得**
+# ✅ 一覧のデータ取得
 def get_selected_month_records():
     """ユーザーがカレンダーで選択した月のデータを取得"""
-
     selected_personid = session.get("selected_personid")
     selected_workday = session.get("workday")
 
     if not selected_personid:
-        app.logger.warning("⚠ 選択された PersonID がありません。データ取得をスキップします。")
-        return []  # PersonID が未選択なら何も取得しない
+        return []
 
     try:
-        if selected_workday:
-            # ユーザーが選択した日付から「年・月」を抽出
-            selected_date = datetime.strptime(selected_workday, "%Y-%m-%d")
-        else:
-            # 何も選択されていない場合は今月をデフォルト
-            selected_date = date.today()
+        selected_date = datetime.strptime(selected_workday, "%Y-%m-%d") if selected_workday else date.today()
+        selected_year, selected_month = selected_date.year, selected_date.month
 
-        selected_year = selected_date.year
-        selected_month = selected_date.month
-
-        # ✅ `filterByFormula` を `YEAR()` と `MONTH()` でシンプルに
-        params = {
-            "filterByFormula": f"AND(YEAR({{WorkDay}})={selected_year}, MONTH({{WorkDay}})={selected_month})"
-        }
-
+        params = {"filterByFormula": f"AND(YEAR({{WorkDay}})={selected_year}, MONTH({{WorkDay}})={selected_month})"}
         table_name = f"TablePersonID_{selected_personid}"
-        app.logger.info(f"📡 Airtable からデータ取得開始: {table_name}（{selected_year}-{selected_month}）")
-
+        
         response = requests.get(f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{table_name}", headers=HEADERS, params=params)
         response.raise_for_status()
         data = response.json().get("records", [])
 
-        records = []
-        for record in data:
-            fields = record.get("fields", {})
-            records.append({
-                "WorkDay": fields.get("WorkDay", "9999-12-31"),  # WorkDay が空なら最後に並ぶように
-                "WorkCD": fields.get("WorkCord", "不明"),
-                "WorkName": fields.get("WorkName", "不明"),
-                "WorkProcess": fields.get("WorkProcess", "不明"),
-                "UnitPrice": fields.get("UnitPrice", "不明"),
-                "WorkOutput": fields.get("WorkOutput", "0"),
-            })
+        records = [
+            {
+                "id": record["id"],  # ✅ レコードIDを取得
+                "WorkDay": record["fields"].get("WorkDay", "9999-12-31"),
+                "WorkCD": record["fields"].get("WorkCord", "不明"),
+                "WorkName": record["fields"].get("WorkName", "不明"),
+                "WorkProcess": record["fields"].get("WorkProcess", "不明"),
+                "UnitPrice": record["fields"].get("UnitPrice", "不明"),
+                "WorkOutput": record["fields"].get("WorkOutput", "0"),
+            }
+            for record in data
+        ]
 
-        # ✅ WorkDay で昇順ソート（YYYY-MM-DDのフォーマットを想定）
         records.sort(key=lambda x: x["WorkDay"])
-
-        app.logger.info(f"✅ {len(records)} 件のデータを取得し、WorkDay で並び替えました")
         return records
 
     except requests.RequestException as e:
-        app.logger.error(f"❌ Airtable データ取得エラー (TablePersonID_{selected_personid}): {e}")
+        print(f"❌ Airtable データ取得エラー: {e}")
         return []
 
+# ✅ レコードの削除
+@app.route("/delete_record/<record_id>", methods=["POST"])
+def delete_record(record_id):
+    selected_personid = session.get("selected_personid")
+    table_name = f"TablePersonID_{selected_personid}"
+    
+    response = requests.delete(f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{table_name}/{record_id}", headers=HEADERS)
+    if response.status_code == 200:
+        flash("✅ レコードを削除しました！", "success")
+    else:
+        flash("❌ 削除に失敗しました。", "error")
+
+    return redirect(url_for("records"))
+
+# ✅ レコードの修正ページ
+@app.route("/edit_record/<record_id>", methods=["GET", "POST"])
+def edit_record(record_id):
+    selected_personid = session.get("selected_personid")
+    table_name = f"TablePersonID_{selected_personid}"
+
+    if request.method == "POST":
+        updated_data = {
+            "fields": {
+                "WorkDay": request.form.get("WorkDay"),
+                "WorkCord": request.form.get("WorkCD"),
+                "WorkName": request.form.get("WorkName"),
+                "WorkProcess": request.form.get("WorkProcess"),
+                "UnitPrice": request.form.get("UnitPrice"),
+                "WorkOutput": request.form.get("WorkOutput"),
+            }
+        }
+        response = requests.patch(f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{table_name}/{record_id}", headers=HEADERS, json=updated_data)
+        if response.status_code == 200:
+            flash("✅ レコードを更新しました！", "success")
+        else:
+            flash("❌ 更新に失敗しました。", "error")
+
+        return redirect(url_for("records"))
+
+    response = requests.get(f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{table_name}/{record_id}", headers=HEADERS)
+    record = response.json().get("fields", {})
+
+    return render_template("edit_record.html", record=record, record_id=record_id)
 
 # 🆕 **一覧表示のルート**
 @app.route("/records")
