@@ -1,13 +1,10 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{{ personid }} の {{ display_month }} の一覧</title>
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
-    
-    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ personid }} の {{ display_month }} の一覧</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <div class="container">
@@ -39,11 +36,11 @@
                             <td>{{ record.WorkProcess }}</td>
                             <td>{{ "{:,.2f}".format(record.UnitPrice|float) }}</td>
                             <td>{{ record.WorkOutput }}</td>
-                            <td>{{ "{:,.0f}".format(record.subtotal) }}</td>
+                            <td>{{ "{:,.2f}".format(record.subtotal) }}</td>
                             <td>
-                                <a href="{{ url_for('edit_record', record_id=record.id) }}" class="icon-button">✏️</a>
+                                <a href="{{ url_for('edit_record', record_id=record.id) }}">✏️</a>
                                 <form method="POST" action="{{ url_for('delete_record', record_id=record.id) }}" style="display:inline;">
-                                    <button type="submit" class="icon-button" onclick="return confirm('本当に削除しますか？');">🗑️</button>
+                                    <button type="submit" onclick="return confirm('本当に削除しますか？');">🗑️</button>
                                 </form>
                             </td>
                         </tr>
@@ -52,7 +49,7 @@
                 <tfoot>
                     <tr>
                         <td colspan="6" style="text-align:right; font-weight:bold;">月合計:</td>
-                        <td style="font-weight:bold;">{{ "{:,.0f}".format(total_amount) }}</td>
+                        <td style="font-weight:bold;">{{ "{:,.2f}".format(total_amount) }}</td>
                         <td></td>
                     </tr>
                 </tfoot>
@@ -63,14 +60,12 @@
     </div>
 
     <script>
-        // 🌙 ダークモード切り替え
         function toggleDarkMode() {
             document.body.classList.toggle("dark-mode");
             const isDarkMode = document.body.classList.contains("dark-mode");
             localStorage.setItem("darkMode", isDarkMode ? "enabled" : "disabled");
         }
 
-        // 🔄 ページ読み込み時にダークモードの状態を復元
         document.addEventListener("DOMContentLoaded", function () {
             if (localStorage.getItem("darkMode") === "enabled") {
                 document.body.classList.add("dark-mode");
