@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ personid }} の {{ display_month }} の一覧</title>
-    <style>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
         /* 基本レイアウト */
         body {
             font-family: Arial, sans-serif;
@@ -110,7 +110,7 @@
                             <td>{{ record.WorkCD }}</td>
                             <td>{{ record.WorkName }}</td>
                             <td>{{ record.WorkProcess }}</td>
-                            <td>{{ "{:,.0f}".format(record.UnitPrice|float) }}</td>
+                            <td>{{ "{:,.2f}".format(record.UnitPrice|float) }}</td>
                             <td>{{ record.WorkOutput }}</td>
                             <td>{{ "{:,.0f}".format(record.subtotal) }}</td>
                             <td>

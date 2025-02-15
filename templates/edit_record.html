@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>レコード編集</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -75,7 +76,8 @@
             <input type="text" id="WorkProcess" name="WorkProcess" value="{{ record.WorkProcess }}" readonly>
 
             <label for="UnitPrice">UnitPrice:</label>
-            <input type="text" id="UnitPrice" name="UnitPrice" value="{{ record.UnitPrice }}" readonly>
+            <input type="text" id="UnitPrice" name="UnitPrice" value="{{ "{:.2f}".format(record.UnitPrice|float) }}" readonly>
+
 
             <label for="WorkOutput">WorkOutput:</label>
             <input type="text" id="WorkOutput" name="WorkOutput" value="{{ record.WorkOutput }}" required>
