@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Airtable BookSKY_NET 215.15</title>
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+  
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -79,47 +80,46 @@
     {% endwith %}
 
     <form method="POST">
-      <label for="personid">PersonID:</label>
+      <label for="personid">📌 PersonID:</label>
       <select id="personid" name="personid" required>
-        <option value="" {% if not selected_personid %}selected{% endif %}>PersonIDを選択してください</option>
-        {% for id, name in personid_dict.items() %}
-          <option value="{{ id }}" {% if selected_personid and id|string == selected_personid|string %}selected{% endif %}>
-            {{ id }} - {{ name }}
-          </option>
-        {% endfor %}
+          <option value="">PersonIDを選択してください</option>
+          {% for id, name in personid_dict.items() %}
+              <option value="{{ id }}" {% if id|string == selected_personid|string %}selected{% endif %}>
+                  {{ id }} - {{ name }}
+              </option>
+          {% endfor %}
       </select>
-
-      <label for="workcd">WorkCD:</label>
+  
+      <label for="workcd">🔢 WorkCD:</label>
       <input type="text" id="workcd" name="workcd" required>
-
-      <!-- WorkCD入力後に候補を取得するボタン -->
-      <button type="button" id="fetchWorkNameButton">候補を取得</button>
-
-      <label for="workname">WorkName:</label>
-      <!-- 取得した候補から選択 -->
+  
+      <button type="button" id="fetchWorkNameButton">🔍 候補を取得</button>
+  
+      <label for="workname">📄 WorkName:</label>
       <select id="workname" name="workname" required>
-        <option value="">該当する WorkName を選択してください</option>
+          <option value="">該当する WorkName を選択してください</option>
       </select>
-
-      <label for="workprocess">WorkProcess:</label>
+  
+      <label for="workprocess">🛠 WorkProcess:</label>
       <select id="workprocess" name="workprocess" required>
-        <option value="">行程名を選択してください</option>
-        {% for item in workprocess_list %}
-          <option value="{{ item }}">{{ item }}</option>
-        {% endfor %}
+          <option value="">行程名を選択してください</option>
+          {% for item in workprocess_list %}
+              <option value="{{ item }}">{{ item }}</option>
+          {% endfor %}
       </select>
-
-      <label for="unitprice">単価:</label>
+  
+      <label for="unitprice">💰 単価:</label>
       <input type="text" id="unitprice" name="unitprice" readonly>
-
-      <label for="workoutput">数量（個、分）:</label>
-      <input type="text" id="workoutput" name="workoutput">
-
-      <label for="workday">作業日:</label>
-      <input type="date" id="workday" name="workday" {% if workday %}value="{{ workday }}"{% endif %} required>
-
-      <button type="submit">送信</button>
-    </form>
+  
+      <label for="workoutput">📦 数量（個、分）:</label>
+      <input type="text" id="workoutput" name="workoutput" required>
+  
+      <label for="workday">📅 作業日:</label>
+      <input type="date" id="workday" name="workday" required>
+  
+      <button type="submit">✅ 送信</button>
+  </form>
+  
   </div>
   <!-- 追加するボタン -->
   <button type="button" onclick="location.href='/records'">入力一覧確認</button>

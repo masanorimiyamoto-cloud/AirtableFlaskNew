@@ -48,22 +48,74 @@ tbody tr:hover {
     background: #e2e6ea; /* ホバー時の色 */
 }
 
-/* 📌 ボタンデザイン */
+/* 📌 入力フォームのスタイル */
+form {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* 📌 ラベルのデザイン */
+label {
+    font-weight: bold;
+    display: block;
+    margin-top: 10px;
+    color: #333;
+}
+
+/* 📌 入力フィールドのデザイン */
+input, select {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+/* 📌 フォーカス時の枠線 */
+input:focus, select:focus {
+    border-color: #007bff;
+    outline: none;
+}
+
+/* 📌 ボタンのデザイン */
 button {
     background: #007bff;
     color: white;
     font-size: 16px;
-    padding: 10px;
+    padding: 12px;
     border: none;
     border-radius: 8px;
     cursor: pointer;
+    width: 100%;
     box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
     transition: 0.2s ease-in-out;
+    margin-top: 15px;
 }
+
 button:hover {
     background: #0056b3;
     transform: scale(1.05);
 }
+
+/* 📌 スマホ向け調整 */
+@media (max-width: 768px) {
+    form {
+        padding: 15px;
+    }
+    input, select {
+        font-size: 14px;
+        padding: 8px;
+    }
+    button {
+        font-size: 14px;
+        padding: 10px;
+    }
+}
+
 
 /* 📌 フォントサイズ調整 */
 h2 {
