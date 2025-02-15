@@ -93,4 +93,12 @@
         <button onclick="location.href='/'">戻る</button>
     </div>
 </body>
+<!-- ✅ 月合計の行を追加 -->
+<tfoot>
+    <tr>
+        <td colspan="6" style="text-align:right; font-weight:bold;">月合計:</td>
+        <td style="font-weight:bold;">{{ "{:,.0f}".format(total_amount) }}</td>  <!-- ✅ 合計表示 -->
+        <td></td>
+    </tr>
+</tfoot>
 </html>
