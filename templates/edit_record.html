@@ -4,7 +4,59 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>レコード編集</title>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 400px;
+            margin: auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            text-align: left;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        /* 修正不可のフィールドをグレーアウト */
+        input[readonly] {
+            background-color: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .cancel-button {
+            background-color: #6c757d;
+        }
+        .cancel-button:hover {
+            background-color: #5a6268;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -13,11 +65,23 @@
             <label for="WorkDay">作業日:</label>
             <input type="date" id="WorkDay" name="WorkDay" value="{{ record.WorkDay }}" required>
 
+            <label for="WorkCD">WorkCD:</label>
+            <input type="text" id="WorkCD" name="WorkCD" value="{{ record.WorkCord }}" readonly>
+
+            <label for="WorkName">WorkName:</label>
+            <input type="text" id="WorkName" name="WorkName" value="{{ record.WorkName }}" readonly>
+
+            <label for="WorkProcess">WorkProcess:</label>
+            <input type="text" id="WorkProcess" name="WorkProcess" value="{{ record.WorkProcess }}" readonly>
+
+            <label for="UnitPrice">UnitPrice:</label>
+            <input type="text" id="UnitPrice" name="UnitPrice" value="{{ record.UnitPrice }}" readonly>
+
             <label for="WorkOutput">WorkOutput:</label>
             <input type="text" id="WorkOutput" name="WorkOutput" value="{{ record.WorkOutput }}" required>
 
             <button type="submit">更新</button>
-            <button type="button" onclick="window.location.href='/records';">キャンセル</button>
+            <button type="button" class="cancel-button" onclick="window.location.href='/records';">キャンセル</button>
         </form>
     </div>
 </body>
