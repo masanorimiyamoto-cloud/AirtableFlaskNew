@@ -294,15 +294,27 @@ def edit_record(record_id):
 @app.route("/records")
 def records():
     records = get_selected_month_records()
-    
+
+    # ✅ 各行の小計 (WorkOutput * UnitPrice) を計算
+    total_amount = 0
+    for record in records:
+        try:
+            unit_price = float(record["UnitPrice"]) if record["UnitPrice"] != "不明" else 0
+            work_output = int(record["WorkOutput"])
+            record["subtotal"] = unit_price * work_output  # ✅ 小計を計算
+        except ValueError:
+            record["subtotal"] = 0  # 計算エラー時は 0 にする
+
+        total_amount += record["subtotal"]  # ✅ 月合計を計算
+
     selected_personid = session.get("selected_personid", "未選択")
     selected_workday = session.get("workday", date.today().strftime("%Y-%m-%d"))
     
-    # 選択された日付から「YYYY年MM月」を取得
     selected_date = datetime.strptime(selected_workday, "%Y-%m-%d")
     display_month = f"{selected_date.year}年{selected_date.month}月"
 
-    return render_template("records.html", records=records, personid=selected_personid, display_month=display_month)
+    return render_template("records.html", records=records, personid=selected_personid, display_month=display_month, total_amount=total_amount)
+
 
 # -------------------------------
 # Flask のルート

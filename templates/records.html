@@ -62,6 +62,7 @@
                         <th>WorkProcess</th>
                         <th>UnitPrice</th>  <!-- ✅ UnitPrice を追加 -->
                         <th>WorkOutput</th>
+                        <th>小計</th>  <!-- ✅ 小計列追加 -->
                         <th>操作</th> <!-- ✅ 新しく追加 -->
                     </tr>
                 </thead>
@@ -74,6 +75,7 @@
                             <td>{{ record.WorkProcess }}</td>
                             <td>{{ record.UnitPrice }}</td>  <!-- ✅ UnitPrice を表示 -->
                             <td>{{ record.WorkOutput }}</td>
+                            <td>{{ "{:,.0f}".format(record.subtotal) }}</td> <!-- ✅ 小計表示 -->
                             <td>
                                 <a href="{{ url_for('edit_record', record_id=record.id) }}">修正</a> |
                                 <form method="POST" action="{{ url_for('delete_record', record_id=record.id) }}" style="display:inline;">
