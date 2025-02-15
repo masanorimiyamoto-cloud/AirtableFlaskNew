@@ -1,0 +1,79 @@
+/* 📌 テーブルデザイン */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+}
+th, td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: center;
+    font-size: 14px;
+}
+th {
+    background: #007bff;
+    color: white;
+    font-weight: bold;
+}
+tbody tr:nth-child(even) {
+    background: #f8f9fa; /* 交互の背景色 */
+}
+tbody tr:hover {
+    background: #e2e6ea; /* ホバー時の色 */
+}
+
+/* 📌 ボタンデザイン */
+button {
+    background: #007bff;
+    color: white;
+    font-size: 16px;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+    transition: 0.2s ease-in-out;
+}
+button:hover {
+    background: #0056b3;
+    transform: scale(1.05);
+}
+
+/* 📌 フォントサイズ調整 */
+h2 {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+}
+@media (max-width: 768px) {
+    th, td {
+        font-size: 12px;
+        padding: 8px;
+    }
+}
+
+/* 📌 コンテナの余白調整 */
+.container {
+    max-width: 95%;
+    margin: auto;
+    padding: 15px;
+}
+
+/* 📌 アニメーション */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.container {
+    animation: fadeIn 0.3s ease-in-out;
+}
