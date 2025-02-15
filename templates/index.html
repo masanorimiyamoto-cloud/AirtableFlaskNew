@@ -66,7 +66,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>Airtable BookSKY_NET 215.15</h2>
+    <h2>Airtable BookSKY_NET 215.2323</h2>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div id="flash-message">
@@ -90,17 +90,17 @@
           {% endfor %}
       </select>
   
-      <label for="workcd">🔢 WorkCD:</label>
+      <label for="workcd">🔢 コード番後</label>
       <input type="text" id="workcd" name="workcd" required>
   
       <button type="button" id="fetchWorkNameButton">🔍 候補を取得</button>
   
-      <label for="workname">📄 WorkName:</label>
+      <label for="workname">📄 品名:</label>
       <select id="workname" name="workname" required>
-          <option value="">該当する WorkName を選択してください</option>
+          <option value="">該当する 品名を選択してください</option>
       </select>
   
-      <label for="workprocess">🛠 WorkProcess:</label>
+      <label for="workprocess">🛠 行程名:</label>
       <select id="workprocess" name="workprocess" required>
           <option value="">行程名を選択してください</option>
           {% for item in workprocess_list %}
@@ -163,7 +163,7 @@
             }
             const records = data.worknames;
             if (records.length === 0) {
-              alert("該当する WorkName が見つかりません");
+              alert("該当する 品名 が見つかりません");
               return;
             }
             fetchWorkNameButton.innerText = records.length + "件見つかりました。";
