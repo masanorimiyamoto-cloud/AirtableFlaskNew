@@ -125,6 +125,17 @@
                 </tbody>
                 <tfoot>
                     <tr>
+                        <td colspan="5" style="text-align:right; font-weight:bold;">月勤務日数:</td>
+                        <td style="font-weight:bold;">{{ workdays_count }}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                    <tr>
+                        <td colspan="5" style="text-align:right; font-weight:bold;">WorkOutput合計 (分給対象):</td>
+                        <td style="font-weight:bold;">{{ "{:,.2f}".format(workoutput_total) }}</td>
+                        <td></td>
+                    </tr>    
+                    <tr>
                         <td colspan="6" style="text-align:right; font-weight:bold;">月合計:</td>
                         <td style="font-weight:bold;">{{ "{:,.0f}".format(total_amount) }}</td>
                         <td></td>
