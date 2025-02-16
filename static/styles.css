@@ -93,12 +93,8 @@ input:focus, select:focus {
     outline: none;
 }
 
-/* 📌 ボタンのデザイン（既存のものを拡張） */
+/* 📌 ボタンのデザイン */
 button {
-    display: flex;
-    align-items: center;  /* ✅ アイコンとテキストを横並び */
-    justify-content: center;
-    gap: 10px;            /* ✅ アイコンとテキストの間隔 */
     background: #007bff;
     color: white;
     font-size: 16px;
@@ -116,13 +112,6 @@ button:hover {
     background: #0056b3;
     transform: scale(1.05);
 }
-
-/* ✅ 送信中にボタンを無効化 */
-button:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-}
-
 
 /* 📌 スマホ向け調整 */
 @media (max-width: 768px) {
