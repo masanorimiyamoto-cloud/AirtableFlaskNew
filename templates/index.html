@@ -66,7 +66,8 @@
 </head>
 <body>
   <div class="container">
-    <h2>Airtable BookSKY_NET 215.2323</h2>
+    <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="BookSKY Logo" class="logo">
+    <h2>Airtable BookSKY_NET 216.16</h2>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div id="flash-message">
@@ -93,7 +94,7 @@
       <label for="workcd">🔢 コード番号</label>
       <input type="text" id="workcd" name="workcd" required>
   
-      <button type="button" id="fetchWorkNameButton">🔍 候補を取得</button>
+      <button type="button" id="fetchWorkNameButton">🔍 品名候補を取得</button>
   
       <label for="workname">📄 品名:</label>
       <select id="workname" name="workname" required>
@@ -184,7 +185,7 @@
   function fetchWorkNames() {
     const workcd = workcdInput.value.trim();
     console.log("候補を取得: workcd =", workcd);
-    fetchWorkNameButton.innerText = "品名候補を取得";
+    fetchWorkNameButton.innerText = "候補を取得";
     worknameSelect.innerHTML = '<option value="">品名を選択してください。</option>';
 
     if (workcd === "") {
