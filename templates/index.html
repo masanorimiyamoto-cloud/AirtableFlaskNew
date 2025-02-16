@@ -127,6 +127,7 @@
   <!-- JavaScript 部分 -->
   <script>
     document.addEventListener("DOMContentLoaded", function () {
+      const personidSelect = document.getElementById("personid");
       const workcdInput = document.getElementById("workcd");
       const worknameSelect = document.getElementById("workname");
       const fetchWorkNameButton = document.getElementById("fetchWorkNameButton");
@@ -162,6 +163,23 @@
     // ✅ WorkDay が変更されたら、新しい値を保存
     workdayInput.addEventListener("change", function () {
         localStorage.setItem("lastWorkDay", workdayInput.value);
+    });
+    // ✅ PersonID のリセット & ページ遷移の区別
+    if (!sessionStorage.getItem("pageLoaded")) {
+        // 初回ロード時のみリセット（リロード扱い）
+        localStorage.removeItem("lastPersonID");
+        sessionStorage.setItem("pageLoaded", "true");
+    } else {
+        // ページ遷移時は PersonID を保持
+        const lastPersonID = localStorage.getItem("lastPersonID");
+        if (lastPersonID) {
+            personidSelect.value = lastPersonID;
+        }
+    }
+
+    // ✅ PersonID が変更されたら保存
+    personidSelect.addEventListener("change", function () {
+        localStorage.setItem("lastPersonID", personidSelect.value);
     });
   function fetchWorkNames() {
     const workcd = workcdInput.value.trim();
