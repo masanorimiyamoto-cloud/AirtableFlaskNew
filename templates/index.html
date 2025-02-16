@@ -131,7 +131,7 @@
       const worknameSelect = document.getElementById("workname");
       const fetchWorkNameButton = document.getElementById("fetchWorkNameButton");
       const workprocessSelect = document.getElementById("workprocess");
-
+      const workdayInput = document.getElementById("workday");
     // ✅ 直前の WorkProcess を取得 & 設定
     const lastWorkProcess = localStorage.getItem("lastWorkProcess");
     if (lastWorkProcess) {
@@ -153,7 +153,16 @@
       workprocessSelect.addEventListener("change", function () {
         fetchUnitPrice();
       });
+    // ✅ 直前の WorkDay を取得 & 設定
+    const lastWorkDay = localStorage.getItem("lastWorkDay");
+    if (lastWorkDay) {
+        workdayInput.value = lastWorkDay; // ✅ WorkDay を前回の値に設定
+    }
 
+    // ✅ WorkDay が変更されたら、新しい値を保存
+    workdayInput.addEventListener("change", function () {
+        localStorage.setItem("lastWorkDay", workdayInput.value);
+    });
   function fetchWorkNames() {
     const workcd = workcdInput.value.trim();
     console.log("候補を取得: workcd =", workcd);
