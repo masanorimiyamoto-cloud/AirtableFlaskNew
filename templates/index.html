@@ -90,7 +90,7 @@
           {% endfor %}
       </select>
   
-      <label for="workcd">🔢 コード番後</label>
+      <label for="workcd">🔢 コード番号</label>
       <input type="text" id="workcd" name="workcd" required>
   
       <button type="button" id="fetchWorkNameButton">🔍 候補を取得</button>
@@ -131,6 +131,17 @@
       const worknameSelect = document.getElementById("workname");
       const fetchWorkNameButton = document.getElementById("fetchWorkNameButton");
       const workprocessSelect = document.getElementById("workprocess");
+
+    // ✅ 直前の WorkProcess を取得 & 設定
+    const lastWorkProcess = localStorage.getItem("lastWorkProcess");
+    if (lastWorkProcess) {
+        workprocessSelect.value = lastWorkProcess;
+    }
+
+    // ✅ WorkProcess が変更されたら、新しい値を保存
+    workprocessSelect.addEventListener("change", function () {
+        localStorage.setItem("lastWorkProcess", workprocessSelect.value);
+    });
       const unitpriceInput = document.getElementById("unitprice");
 
       fetchWorkNameButton.addEventListener("click", function () {
@@ -141,41 +152,55 @@
         fetchUnitPrice();
       });
 
-      function fetchWorkNames() {
-        const workcd = workcdInput.value.trim();
-        console.log("候補を取得: workcd =", workcd);
-        fetchWorkNameButton.innerText = "候補を取得";
-        worknameSelect.innerHTML = '<option value="">品名を選択してください。</option>';
-        if (workcd === "") {
-          return;
-        }
-        fetch(`/get_worknames?workcd=${workcd}`)
-          .then(response => response.json())
-          .then(data => {
+  function fetchWorkNames() {
+    const workcd = workcdInput.value.trim();
+    console.log("候補を取得: workcd =", workcd);
+    fetchWorkNameButton.innerText = "候補を取得";
+    worknameSelect.innerHTML = '<option value="">品名を選択してください。</option>';
+
+    if (workcd === "") {
+        return;
+    }
+
+    fetch(`/get_worknames?workcd=${workcd}`)
+        .then(response => response.json())
+        .then(data => {
             console.log("取得結果:", data);
             if (!data || typeof data.worknames === "undefined") {
-              alert("サーバからのレスポンスが不正です: " + JSON.stringify(data));
-              return;
+                alert("サーバからのレスポンスが不正です: " + JSON.stringify(data));
+                return;
             }
             if (data.error) {
-              alert(data.error);
-              return;
+                alert(data.error);
+                return;
             }
+
             const records = data.worknames;
             if (records.length === 0) {
-              alert("該当する 品名 が見つかりません");
-              return;
+                alert("該当する WorkName が見つかりません");
+                return;
             }
+
+            // ✅ 候補リストを展開
             fetchWorkNameButton.innerText = records.length + "件見つかりました。";
             records.forEach(record => {
-              const option = document.createElement("option");
-              option.value = record.workname + "||" + record.bookname;
-              option.text = record.workname + (record.bookname ? " (" + record.bookname + ")" : "");
-              worknameSelect.appendChild(option);
+                const option = document.createElement("option");
+                option.value = record.workname + "||" + record.bookname;
+                option.text = record.workname + (record.bookname ? " (" + record.bookname + ")" : "");
+                worknameSelect.appendChild(option);
             });
-          })
-          .catch(error => console.error("エラー:", error));
-      }
+
+            // ✅ 候補が1件だけなら自動選択
+            if (records.length === 1) {
+                worknameSelect.value = records[0].workname + "||" + records[0].bookname;
+                workprocessSelect.focus(); // ✅ すぐに WorkProcess へ移動
+            } else {
+                worknameSelect.focus(); // ✅ リストボックスを自動フォーカス
+            }
+        })
+        .catch(error => console.error("エラー:", error));
+　　}
+
 
       function fetchUnitPrice() {
         const workprocess = workprocessSelect.value;
