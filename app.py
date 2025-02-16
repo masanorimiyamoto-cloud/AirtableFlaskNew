@@ -306,14 +306,16 @@ def records():
             record["subtotal"] = 0  # 計算エラー時は 0 にする
 
         total_amount += record["subtotal"]  # ✅ 月合計を計算
-
+    # ✅ 勤務日数を計算（ユニークな WorkDay の数）
+    unique_workdays = set(record["WorkDay"] for record in records)
+    workdays_count = len(unique_workdays)  # ✅ ユニークな日付の数 = 勤務日数
     selected_personid = session.get("selected_personid", "未選択")
     selected_workday = session.get("workday", date.today().strftime("%Y-%m-%d"))
     
     selected_date = datetime.strptime(selected_workday, "%Y-%m-%d")
     display_month = f"{selected_date.year}年{selected_date.month}月"
 
-    return render_template("records.html", records=records, personid=selected_personid, display_month=display_month, total_amount=total_amount)
+    return render_template("records.html", records=records, personid=selected_personid, display_month=display_month, total_amount=total_amount, workdays_count=workdays_count)
 
 
 # -------------------------------
