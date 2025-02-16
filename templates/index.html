@@ -136,11 +136,13 @@
     const lastWorkProcess = localStorage.getItem("lastWorkProcess");
     if (lastWorkProcess) {
         workprocessSelect.value = lastWorkProcess;
+        fetchUnitPrice(); // ✅ WorkProcess をセットした後に UnitPrice を取得
     }
-
+    
     // ✅ WorkProcess が変更されたら、新しい値を保存
     workprocessSelect.addEventListener("change", function () {
         localStorage.setItem("lastWorkProcess", workprocessSelect.value);
+        fetchUnitPrice(); // ✅ WorkProcess が変更されたら UnitPrice を更新
     });
       const unitpriceInput = document.getElementById("unitprice");
 
