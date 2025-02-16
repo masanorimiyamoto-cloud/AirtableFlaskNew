@@ -118,7 +118,10 @@
       <label for="workday">📅 作業日:</label>
       <input type="date" id="workday" name="workday" required>
   
-      <button type="submit">✅ 送信</button>
+      <button id="submitButton">
+        <span id="checkIcon">⬜</span> ✅ 送信
+      </button>
+    
   </form>
   
   </div>
@@ -177,7 +180,34 @@
             personidSelect.value = lastPersonID;
         }
     }
+    const submitButton = document.getElementById("submitButton");
+        const checkIcon = document.getElementById("checkIcon");
 
+        submitButton.addEventListener("click", function (event) {
+            event.preventDefault();  // ✅ 送信を防ぎ、手動で処理を進める
+            
+            submitButton.disabled = true;  // ✅ 二重送信防止
+            checkIcon.textContent = "✔";  // ✅ 送信後にチェックマーク表示
+
+            let formData = new FormData(document.querySelector("form"));
+
+            fetch("/", { method: "POST", body: formData })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast("✅ データが保存されました！");
+                        document.querySelector("form").reset();
+                    }
+                    submitButton.disabled = false;  // ✅ 送信完了後にボタンを再び有効化
+                    checkIcon.textContent = "⬜";  // ✅ 再送信できるように戻す
+                })
+                .catch(error => {
+                    console.error("エラー:", error);
+                    showToast("⚠ 送信に失敗しました");
+                    submitButton.disabled = false;
+                    checkIcon.textContent = "⬜";  // ✅ エラー時も戻す
+                });
+        });
     // ✅ PersonID が変更されたら保存
     personidSelect.addEventListener("change", function () {
         localStorage.setItem("lastPersonID", personidSelect.value);
