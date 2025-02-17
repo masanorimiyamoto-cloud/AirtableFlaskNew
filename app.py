@@ -28,13 +28,14 @@ client = gspread.authorize(creds)
 with open("configAirtable.json", "r") as f:
     config = json.load(f)
 
-AIRTABLE_TOKEN = config["AIRTABLE_TOKEN"]
-AIRTABLE_BASE_ID = config["AIRTABLE_BASE_ID"]
+#AIRTABLE_TOKEN = config["AIRTABLE_TOKEN"]
+#AIRTABLE_BASE_ID = config["AIRTABLE_BASE_ID"]
+#AIRTABLE_BASE_ID = config["AIRTABLE_BASE_ID_BookSKY"]
 
-SOURCE_TABLE = "TableCD"
+#SOURCE_TABLE = "TableCD"
 # ※ TableWorkProcess は今後使用しない
 
-SOURCE_URL = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{SOURCE_TABLE}"
+#SOURCE_URL = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{SOURCE_TABLE}"
 # WORK_PROCESS_URL は削除可能（送信先には影響なし）
 
 HEADERS = {
