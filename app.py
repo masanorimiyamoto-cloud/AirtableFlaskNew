@@ -25,14 +25,13 @@ creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, s
 client = gspread.authorize(creds)
 
 # ==== Airtable 設定 (送信先用)
-with open("configAirtable.json", "r") as f:
-    config = json.load(f)
+#with open("configAirtable.json", "r") as f:
+#    config = json.load(f)
 
-
-AIRTABLE_TOKEN = config["AIRTABLE_TOKEN"]
-#AIRTABLE_BASE_ID = config["AIRTABLE_BASE_ID"]
+#AIRTABLE_TOKEN = config["AIRTABLE_TOKEN"]
 #AIRTABLE_BASE_ID = config["AIRTABLE_BASE_ID_BookSKY"]
-AIRTABLE_BASE_ID = "appvqBb4AEfL5CuMM"
+AIRTABLE_TOKEN = os.environ.get("AIRTABLE_TOKEN")
+AIRTABLE_BASE_ID = os.environ.get("AIRTABLE_BASE_ID_BookSKY")
 
 #SOURCE_TABLE = "TableCD"
 # ※ TableWorkProcess は今後使用しない
