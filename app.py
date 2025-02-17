@@ -31,7 +31,8 @@ with open("configAirtable.json", "r") as f:
 
 AIRTABLE_TOKEN = config["AIRTABLE_TOKEN"]
 #AIRTABLE_BASE_ID = config["AIRTABLE_BASE_ID"]
-AIRTABLE_BASE_ID = config["AIRTABLE_BASE_ID_BookSKY"]
+#AIRTABLE_BASE_ID = config["AIRTABLE_BASE_ID_BookSKY"]
+AIRTABLE_BASE_ID = "appvqBb4AEfL5CuMM"
 
 #SOURCE_TABLE = "TableCD"
 # ※ TableWorkProcess は今後使用しない
