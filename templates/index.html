@@ -92,7 +92,11 @@
       </select>
   
       <label for="workcd">🔢 コード番号</label>
-      <input type="text" id="workcd" name="workcd" required>
+      <!-- list属性でdatalistのIDを指定 -->
+      <input type="text" id="workcd" name="workcd" list="recentWorkCD" required>
+      <!-- 最近入力したWorkCD候補を表示する datalist -->
+      <datalist id="recentWorkCD"></datalist>
+
   
       <button type="button" id="fetchWorkNameButton">🔍 品名候補を取得</button>
   
@@ -191,7 +195,7 @@
     if (workcd === "") {
         return;
     }
-
+    
     fetch(`/get_worknames?workcd=${workcd}`)
         .then(response => response.json())
         .then(data => {
@@ -230,7 +234,46 @@
         })
         .catch(error => console.error("エラー:", error));
 　　}
+   // ① 最近のWorkCDをlocalStorageから読み込んでdatalistに反映
+   function loadRecentWorkCD() {
+        let recentWorkCDs = JSON.parse(localStorage.getItem("recentWorkCD")) || [];
+        const datalist = document.getElementById("recentWorkCD");
+        datalist.innerHTML = ""; // 既存のオプションをクリア
+        recentWorkCDs.forEach(workcd => {
+            let option = document.createElement("option");
+            option.value = workcd;
+            datalist.appendChild(option);
+        });
+    }
 
+    // ② WorkCD入力を保存する関数（最大5件）
+    function saveRecentWorkCD(newWorkCD) {
+        let recentWorkCDs = JSON.parse(localStorage.getItem("recentWorkCD")) || [];
+        // 重複を削除
+        recentWorkCDs = recentWorkCDs.filter(cd => cd !== newWorkCD);
+        // 新しい値を先頭に追加
+        recentWorkCDs.unshift(newWorkCD);
+        // 最大5件に制限
+        if (recentWorkCDs.length > 5) {
+            recentWorkCDs = recentWorkCDs.slice(0, 5);
+        }
+        localStorage.setItem("recentWorkCD", JSON.stringify(recentWorkCDs));
+    }
+
+    // ページ読み込み時に候補を読み込む
+    loadRecentWorkCD();
+
+    // 送信処理時にWorkCDを保存する（既存の送信処理内で追加）
+    const form = document.querySelector("form");
+    form.addEventListener("submit", function (event) {
+        // 送信前にWorkCDの値を保存
+        let workcdValue = workcdInput.value.trim();
+        if (workcdValue !== "") {
+            saveRecentWorkCD(workcdValue);
+            loadRecentWorkCD(); // 保存後に再反映
+        }
+        // 既存の送信処理（fetch等）のコードはそのまま
+    });
 
       function fetchUnitPrice() {
         const workprocess = workprocessSelect.value;
