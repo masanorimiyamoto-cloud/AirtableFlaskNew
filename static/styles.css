@@ -142,6 +142,24 @@ input:focus, select:focus {
     border-color: #007bff;
     outline: none;
 }
+.icon-button {
+    /* 既存のスタイル */
+    font-size: 14px;  /* 例: 小さくしたいサイズ */
+    cursor: pointer;
+    
+    /* デフォルトのボタン背景/境界線/余白などを除去 */
+    background: none;
+    border: none;
+    box-shadow: none;
+    outline: none;
+    padding: 0;
+    margin: 0;
+    
+    /* 必要に応じて display を変更 */
+    display: inline-flex;   /* アイコンを中央寄せしたい場合 */
+    align-items: center;
+    justify-content: center;
+}
 
 /* 📌 ボタンのデザイン */
 button {
