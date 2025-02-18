@@ -219,3 +219,9 @@ button:disabled {
 .container {
     animation: fadeIn 0.3s ease-in-out;
 }
+/* 既存の .icon-button 定義はそのまま */
+
+/* 小さいアイコン用の追加スタイル */
+.icon-button.small-icon {
+    font-size: 14px; /* 必要に応じて数値を調整 */
+}
