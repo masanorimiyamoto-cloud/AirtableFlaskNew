@@ -1,112 +1,63 @@
-/* 📌 基本レイアウト */
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
-    text-align: center;
-    padding: 20px;
-}
-
-/* 📌 コンテナ */
-.container {
-    max-width: 95%;
-    margin: 20px auto;
-    padding: 15px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-    text-align: left;
-}
-
-/* 📌 タイトル */
-h2 {
-    text-align: center;
-    font-size: 22px;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 15px;
-}
-
-/* 📌 テーブルのレスポンシブ対応とヘッダー固定 */
-.table-container {
-    max-height: 500px; /* 適宜調整 */
-    overflow-y: auto;
-    margin-top: 15px;
-    border: 1px solid #ddd;
-}
-
+/* 📌 テーブルデザイン */
 table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 10px;
+    border-radius: 8px;
+    overflow: hidden;
     background: white;
 }
-
 th, td {
     border: 1px solid #ddd;
     padding: 12px;
     text-align: center;
-    font-size: 16px;
-    white-space: nowrap;
+    font-size: 14px;
 }
-
 th {
     background: #007bff;
     color: white;
     font-weight: bold;
-}
-
-/* ✅ 通常時（ライトモード）のテーブル行の背景色 */
+}/* 📌 通常時（ライトモード）のテーブル行の背景色 */
 tbody tr:nth-child(even) {
     background: #f8f9fa;
 }
 
-/* ✅ 夜モード（ダークモード）のテーブル行の背景色修正 */
+/* 📌 夜モード（ダークモード）のテーブル行の背景色修正 */
 body.dark-mode tbody tr:nth-child(even) {
-    background: #333;
+    background: #333;  /* ✅ ダークモード時に背景を暗めに */
 }
 
-/* ✅ 夜モード（ダークモード）の通常行の文字色 */
+/* 📌 夜モード（ダークモード）の通常行の文字色 */
 body.dark-mode td {
-    color: #ddd;
+    color: #ddd; /* ✅ 文字色を少し明るめに */
 }
 
-/* ✅ 夜モード（ダークモード）のヘッダー */
+/* 📌 夜モード（ダークモード）のヘッダー */
 body.dark-mode th {
-    background: #444;
+    background: #444; /* ✅ ヘッダーをもう少し明るく */
     color: white;
 }
 
-/* ✅ 夜モード（ダークモード）のボーダー */
-body.dark-mode td,
+/* 📌 夜モード（ダークモード）のボーダー */
+body.dark-mode td, 
 body.dark-mode th {
-    border-color: #555;
+    border-color: #555; /* ✅ ボーダーも適切に調整 */
 }
 
 tbody tr:hover {
-    background: #e2e6ea;
+    background: #e2e6ea; /* ホバー時の色 */
 }
-
-/* 📌 ヘッダーの固定 */
-.table-container thead th {
-    position: sticky;
-    top: 0;
-    background: #007bff;
-    color: white;
-    z-index: 10;
-    padding: 12px;
-}
-
 /* 📌 ロゴとタイトルを並べる */
 .header {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 10px; /* ロゴとタイトルの間隔 */
 }
 
 /* 📌 ロゴのサイズ調整 */
 .logo {
-    width: 50px;
-    height: auto;
+    width: 50px;  /* 適宜調整 */
+    height: auto; /* 比率を維持 */
 }
 
 /* 📌 入力フォームのスタイル */
@@ -123,17 +74,16 @@ label {
     display: block;
     margin-top: 10px;
     color: #333;
-    font-size: 18px;
 }
 
 /* 📌 入力フィールドのデザイン */
 input, select {
     width: 100%;
-    padding: 12px;
+    padding: 10px;
     margin-top: 5px;
     border: 2px solid #ccc;
     border-radius: 5px;
-    font-size: 20px;
+    font-size: 16px;
     transition: border-color 0.3s;
 }
 
@@ -142,49 +92,13 @@ input:focus, select:focus {
     border-color: #007bff;
     outline: none;
 }
-.icon-button {
-    display: inline-block;
-    font-size: 14px;    /* 必要に応じて調整 */
-    line-height: 1;     /* アイコンの高さを詰める */
-    cursor: pointer;
-
-    /* デフォルトボタンの背景や枠線を除去 */
-    background: transparent;
-    border: none;
-    outline: none;
-    box-shadow: none;
-    padding: 0;
-    margin: 0;
-
-    /* 各ブラウザのappearanceをリセット */
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-}
-
-/* Firefoxで発生する内側の余白を除去 */
-.icon-button::-moz-focus-inner {
-    border: 0;
-    padding: 0;
-    margin: 0;
-}
-
-/* ホバー時やフォーカス時も背景を付けない */
-.icon-button:hover,
-.icon-button:focus {
-    background: transparent !important;
-    outline: none !important;
-    box-shadow: none !important;
-}
-
 
 /* 📌 ボタンのデザイン */
 button {
-    display: block;
     background: #007bff;
     color: white;
-    font-size: 18px;
-    padding: 14px;
+    font-size: 16px;
+    padding: 12px;
     border: none;
     border-radius: 8px;
     cursor: pointer;
@@ -199,37 +113,33 @@ button:hover {
     transform: scale(1.05);
 }
 
-button:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-}
-
 /* 📌 スマホ向け調整 */
-/* ※ 画面幅が768px以下の場合は、むしろフォントサイズを大きくして視認性を確保 */
 @media (max-width: 768px) {
-    body {
-        font-size: 24px;
-    }
-    .container {
-        padding: 20px;
-    }
-    h2 {
-        font-size: 24px;
-    }
-    label {
-        font-size: 20px;
+    form {
+        padding: 15px;
     }
     input, select {
-        font-size: 22px;
-        padding: 12px;
+        font-size: 14px;
+        padding: 8px;
     }
     button {
-        font-size: 20px;
-        padding: 14px;
+        font-size: 14px;
+        padding: 10px;
     }
+}
+
+
+/* 📌 フォントサイズ調整 */
+h2 {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+}
+@media (max-width: 768px) {
     th, td {
-        font-size: 18px;
-        padding: 12px;
+        font-size: 12px;
+        padding: 8px;
     }
 }
 
@@ -253,10 +163,4 @@ button:disabled {
 }
 .container {
     animation: fadeIn 0.3s ease-in-out;
-}
-/* 既存の .icon-button 定義はそのまま */
-
-/* 小さいアイコン用の追加スタイル */
-.icon-button.small-icon {
-    font-size: 14px; /* 必要に応じて数値を調整 */
 }
