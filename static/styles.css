@@ -208,7 +208,7 @@ button:disabled {
 /* ※ 画面幅が768px以下の場合は、むしろフォントサイズを大きくして視認性を確保 */
 @media (max-width: 768px) {
     body {
-        font-size: 18px;
+        font-size: 24px;
     }
     .container {
         padding: 20px;
