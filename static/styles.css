@@ -133,7 +133,7 @@ input, select {
     margin-top: 5px;
     border: 2px solid #ccc;
     border-radius: 5px;
-    font-size: 18px;
+    font-size: 20px;
     transition: border-color 0.3s;
 }
 
@@ -143,23 +143,40 @@ input:focus, select:focus {
     outline: none;
 }
 .icon-button {
-    /* 既存のスタイル */
-    font-size: 14px;  /* 例: 小さくしたいサイズ */
+    display: inline-block;
+    font-size: 14px;    /* 必要に応じて調整 */
+    line-height: 1;     /* アイコンの高さを詰める */
     cursor: pointer;
-    
-    /* デフォルトのボタン背景/境界線/余白などを除去 */
-    background: none;
+
+    /* デフォルトボタンの背景や枠線を除去 */
+    background: transparent;
     border: none;
-    box-shadow: none;
     outline: none;
+    box-shadow: none;
     padding: 0;
     margin: 0;
-    
-    /* 必要に応じて display を変更 */
-    display: inline-flex;   /* アイコンを中央寄せしたい場合 */
-    align-items: center;
-    justify-content: center;
+
+    /* 各ブラウザのappearanceをリセット */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
 }
+
+/* Firefoxで発生する内側の余白を除去 */
+.icon-button::-moz-focus-inner {
+    border: 0;
+    padding: 0;
+    margin: 0;
+}
+
+/* ホバー時やフォーカス時も背景を付けない */
+.icon-button:hover,
+.icon-button:focus {
+    background: transparent !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 
 /* 📌 ボタンのデザイン */
 button {
@@ -203,7 +220,7 @@ button:disabled {
         font-size: 20px;
     }
     input, select {
-        font-size: 20px;
+        font-size: 22px;
         padding: 12px;
     }
     button {
