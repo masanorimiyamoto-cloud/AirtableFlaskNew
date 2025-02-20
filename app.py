@@ -25,17 +25,15 @@ creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, s
 client = gspread.authorize(creds)
 
 # ==== Airtable 設定 (送信先用)
-with open("configAirtable.json", "r") as f:
-    config = json.load(f)
+#with open("configAirtable.json", "r") as f:
+#    config = json.load(f)
 
-
-AIRTABLE_TOKEN = config["AIRTABLE_TOKEN"]
-#AIRTABLE_BASE_ID = config["AIRTABLE_BASE_ID"]
+#AIRTABLE_TOKEN = config["AIRTABLE_TOKEN"]
 #AIRTABLE_BASE_ID = config["AIRTABLE_BASE_ID_BookSKY"]
-AIRTABLE_BASE_ID = "appvqBb4AEfL5CuMM"
+AIRTABLE_TOKEN = os.environ.get("AIRTABLE_TOKEN")
+AIRTABLE_BASE_ID = os.environ.get("AIRTABLE_BASE_ID_BookSKY")
 
-#SOURCE_TABLE = "TableCD"
-# ※ TableWorkProcess は今後使用しない
+
 
 #SOURCE_URL = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{SOURCE_TABLE}"
 # WORK_PROCESS_URL は削除可能（送信先には影響なし）
@@ -365,23 +363,26 @@ def index():
                                    workprocess_list=workprocess_list,
                                    workday=workday)
         if not workcd.isdigit():
-            flash("⚠ WorkCD は数値を入力してください！", "error")
+            flash("⚠ 品名コードは数値を入力してください！", "error")
             return render_template("index.html",
                                    personid_list=personid_list,
                                    personid_dict=personid_dict,
                                    selected_personid=selected_personid,
                                    workprocess_list=workprocess_list,
                                    workday=workday)
-        if not workoutput.isdigit():
-            flash("⚠ WorkOutput は数値を入力してください！", "error")
-            return render_template("index.html",
-                                   personid_list=personid_list,
-                                   personid_dict=personid_dict,
-                                   selected_personid=selected_personid,
-                                   workprocess_list=workprocess_list,
-                                   workday=workday)
+        # WorkOutput の数値変換（空白なら 0 とする）
+        try:
+         workoutput_val = int(workoutput) if workoutput.strip() != "" else 0
+        except ValueError:
+         flash("⚠ 数量は数値を入力してください！", "error")
+        return render_template("index.html",
+                           personid_list=personid_list,
+                           personid_dict=personid_dict,
+                           selected_personid=selected_personid,
+                           workprocess_list=workprocess_list,
+                           workday=workday)
         if not workprocess or not workday:
-            flash("⚠ すべてのフィールドを入力してください！", "error")
+            flash("⚠ 行程と作業日は入力してください！", "error")
             return render_template("index.html",
                                    personid_list=personid_list,
                                    personid_dict=personid_dict,
