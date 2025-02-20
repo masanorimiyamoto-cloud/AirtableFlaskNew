@@ -91,7 +91,7 @@
           {% endfor %}
       </select>
   
-      <label for="workcd">🔢 コード番号</label>
+      <label for="workcd">🔢 品名コード番号</label>
       <input type="text" id="workcd" name="workcd" required>
   
       <button type="button" id="fetchWorkNameButton">🔍 品名候補を取得</button>
@@ -118,7 +118,7 @@
       <label for="workday">📅 作業日:</label>
       <input type="date" id="workday" name="workday" required>
   
-      <button type="submit">✅ 送信</button>
+      <button type="submit" id="submitButton">送信</button>
   </form>
   
   </div>
@@ -140,7 +140,12 @@
         workprocessSelect.value = lastWorkProcess;
         fetchUnitPrice(); // ✅ WorkProcess をセットした後に UnitPrice を取得
     }
-    
+    const submitButton = document.getElementById("submitButton");
+　　document.querySelector("form").addEventListener("submit", function () {
+  　submitButton.innerHTML = "✅ 送信";
+  　submitButton.disabled = true; // 重複送信防止のためボタンを無効化
+　　});
+
     // ✅ WorkProcess が変更されたら、新しい値を保存
     workprocessSelect.addEventListener("change", function () {
         localStorage.setItem("lastWorkProcess", workprocessSelect.value);
