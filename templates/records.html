@@ -148,6 +148,14 @@
     </div>
 
     <script>
+        // ページ内の更新フォーム（または該当のフォーム）を取得
+         const updateForm = document.querySelector("form");
+         const updateButton = document.getElementById("updateButton");
+
+        updateForm.addEventListener("submit", function () {
+        updateButton.innerHTML = "✅ 更新";
+        updateButton.disabled = true;
+        });
         // 🌙 ダークモード切り替え
         function toggleDarkMode() {
             document.body.classList.toggle("dark-mode");
