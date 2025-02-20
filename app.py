@@ -345,15 +345,24 @@ def index():
     if request.method == "POST":
      selected_personid = request.form.get("personid", "").strip()
      workcd = request.form.get("workcd", "").strip()
-     workoutput = request.form.get("workoutput", "").strip()
+    # 空文字の場合は "0" を設定
+     workoutput = request.form.get("workoutput", "").strip() or "0"
      workprocess = request.form.get("workprocess", "").strip()
      workday = request.form.get("workday", "").strip()
 
-    # WorkOutput が空の場合は "0" を設定
-    if workoutput == "":
-        workoutput = "0"
+    # WorkOutput の数値変換（空白の場合は既に "0" が設定されているので問題なく変換できるはず）
+    try:
+        workoutput_val = int(workoutput)
+    except ValueError:
+        flash("⚠ 数量は数値を入力してください！", "error")
+        return render_template("index.html",
+                               personid_list=personid_list,
+                               personid_dict=personid_dict,
+                               selected_personid=selected_personid,
+                               workprocess_list=workprocess_list,
+                               workday=workday)
 
-    # 各入力のバリデーション（エラー時は入力内容を保持して再表示）
+    # 各入力のバリデーション
     if not selected_personid.isdigit() or int(selected_personid) not in personid_list:
         flash("⚠ 有効な PersonID を選択してください！", "error")
         return render_template("index.html",
@@ -364,17 +373,6 @@ def index():
                                workday=workday)
     if not workcd.isdigit():
         flash("⚠ 品名コードは数値を入力してください！", "error")
-        return render_template("index.html",
-                               personid_list=personid_list,
-                               personid_dict=personid_dict,
-                               selected_personid=selected_personid,
-                               workprocess_list=workprocess_list,
-                               workday=workday)
-    # WorkOutput の数値変換（空白なら 0 とする）
-    try:
-        workoutput_val = int(workoutput)
-    except ValueError:
-        flash("⚠ 数量は数値を入力してください！", "error")
         return render_template("index.html",
                                personid_list=personid_list,
                                personid_dict=personid_dict,
