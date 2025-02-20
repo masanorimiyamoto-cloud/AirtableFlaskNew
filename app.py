@@ -343,94 +343,86 @@ def index():
         flash(error, "error")
         
     if request.method == "POST":
-        selected_personid = request.form.get("personid", "").strip()
-        workcd = request.form.get("workcd", "").strip()
-        workoutput = request.form.get("workoutput", "").strip()
-        workprocess = request.form.get("workprocess", "").strip()
-        workday = request.form.get("workday", "").strip()
+     selected_personid = request.form.get("personid", "").strip()
+     workcd = request.form.get("workcd", "").strip()
+     workoutput = request.form.get("workoutput", "").strip()
+     workprocess = request.form.get("workprocess", "").strip()
+     workday = request.form.get("workday", "").strip()
 
-        # WorkOutput が空の場合は "0" を設定
-        if workoutput == "":
-            workoutput = "0"
+    # WorkOutput が空の場合は "0" を設定
+    if workoutput == "":
+        workoutput = "0"
 
-        # 各入力のバリデーション（エラー時は入力内容を保持して再表示）
-        if not selected_personid.isdigit() or int(selected_personid) not in personid_list:
-            flash("⚠ 有効な PersonID を選択してください！", "error")
-            return render_template("index.html",
-                                   personid_list=personid_list,
-                                   personid_dict=personid_dict,
-                                   selected_personid="",
-                                   workprocess_list=workprocess_list,
-                                   workday=workday)
-        if not workcd.isdigit():
-            flash("⚠ 品名コードは数値を入力してください！", "error")
-            return render_template("index.html",
-                                   personid_list=personid_list,
-                                   personid_dict=personid_dict,
-                                   selected_personid=selected_personid,
-                                   workprocess_list=workprocess_list,
-                                   workday=workday)
-        # WorkOutput の数値変換（空白なら 0 とする）
-        try:
-         workoutput_val = int(workoutput) if workoutput.strip() != "" else 0
-        except ValueError:
-         flash("⚠ 数量は数値を入力してください！", "error")
+    # 各入力のバリデーション（エラー時は入力内容を保持して再表示）
+    if not selected_personid.isdigit() or int(selected_personid) not in personid_list:
+        flash("⚠ 有効な PersonID を選択してください！", "error")
         return render_template("index.html",
-                           personid_list=personid_list,
-                           personid_dict=personid_dict,
-                           selected_personid=selected_personid,
-                           workprocess_list=workprocess_list,
-                           workday=workday)
-        if not workprocess or not workday:
-            flash("⚠ 行程と作業日は入力してください！", "error")
-            return render_template("index.html",
-                                   personid_list=personid_list,
-                                   personid_dict=personid_dict,
-                                   selected_personid=selected_personid,
-                                   workprocess_list=workprocess_list,
-                                   workday=workday)
+                               personid_list=personid_list,
+                               personid_dict=personid_dict,
+                               selected_personid="",
+                               workprocess_list=workprocess_list,
+                               workday=workday)
+    if not workcd.isdigit():
+        flash("⚠ 品名コードは数値を入力してください！", "error")
+        return render_template("index.html",
+                               personid_list=personid_list,
+                               personid_dict=personid_dict,
+                               selected_personid=selected_personid,
+                               workprocess_list=workprocess_list,
+                               workday=workday)
+    # WorkOutput の数値変換（空白なら 0 とする）
+    try:
+        workoutput_val = int(workoutput)
+    except ValueError:
+        flash("⚠ 数量は数値を入力してください！", "error")
+        return render_template("index.html",
+                               personid_list=personid_list,
+                               personid_dict=personid_dict,
+                               selected_personid=selected_personid,
+                               workprocess_list=workprocess_list,
+                               workday=workday)
+    if not workprocess or not workday:
+        flash("⚠ 行程と作業日は入力してください！", "error")
+        return render_template("index.html",
+                               personid_list=personid_list,
+                               personid_dict=personid_dict,
+                               selected_personid=selected_personid,
+                               workprocess_list=workprocess_list,
+                               workday=workday)
 
-        selected_option = request.form.get("workname", "").strip()
-        if not selected_option:
-            flash("⚠ 該当する WorkName の選択が必要です！", "error")
-            return render_template("index.html",
-                                   personid_list=personid_list,
-                                   personid_dict=personid_dict,
-                                   selected_personid=selected_personid,
-                                   workprocess_list=workprocess_list,
-                                   workday=workday)
-        try:
-            workname, bookname = selected_option.split("||")
-        except ValueError:
-            flash("⚠ WorkName の選択値に不正な形式が含まれています。", "error")
-            return render_template("index.html",
-                                   personid_list=personid_list,
-                                   personid_dict=personid_dict,
-                                   selected_personid=selected_personid,
-                                   workprocess_list=workprocess_list,
-                                   workday=workday)
+    selected_option = request.form.get("workname", "").strip()
+    if not selected_option:
+        flash("⚠ 該当する WorkName の選択が必要です！", "error")
+        return render_template("index.html",
+                               personid_list=personid_list,
+                               personid_dict=personid_dict,
+                               selected_personid=selected_personid,
+                               workprocess_list=workprocess_list,
+                               workday=workday)
+    try:
+        workname, bookname = selected_option.split("||")
+    except ValueError:
+        flash("⚠ WorkName の選択値に不正な形式が含まれています。", "error")
+        return render_template("index.html",
+                               personid_list=personid_list,
+                               personid_dict=personid_dict,
+                               selected_personid=selected_personid,
+                               workprocess_list=workprocess_list,
+                               workday=workday)
 
-        dest_table = f"TablePersonID_{selected_personid}"
-        dest_url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{dest_table}"
-        unitprice = unitprice_dict.get(workprocess, 0)
-        status_code, response_text = send_record_to_destination(
-            dest_url, workcd, workname, bookname, workoutput, workprocess, unitprice, workday
-        )
-        flash(response_text, "success" if status_code == 200 else "error")
-        # セッションに前回入力された PersonID と作業日を保存
-        session['selected_personid'] = selected_personid
-        session['workday'] = workday
-        return redirect(url_for("index"))
-    else:
-        # GET時は、セッションに保存された値を利用（なければ空文字）
-        selected_personid = session.get('selected_personid', "")
-        workday = session.get('workday', "")
-    return render_template("index.html",
-                           workprocess_list=workprocess_list,
-                           personid_list=personid_list,
-                           personid_dict=personid_dict,
-                           selected_personid=selected_personid,
-                           workday=workday)
+    dest_table = f"TablePersonID_{selected_personid}"
+    dest_url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{dest_table}"
+    unitprice = unitprice_dict.get(workprocess, 0)
+    status_code, response_text = send_record_to_destination(
+        dest_url, workcd, workname, bookname, workoutput_val, workprocess, unitprice, workday
+    )
+    flash(response_text, "success" if status_code == 200 else "error")
+    # セッションに前回入力された PersonID と作業日を保存
+    session['selected_personid'] = selected_personid
+    session['workday'] = workday
+    return redirect(url_for("index"))
+
+    
 
 if __name__ == "__main__":
     from waitress import serve
