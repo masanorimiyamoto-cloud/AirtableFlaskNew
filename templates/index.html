@@ -69,8 +69,10 @@
 </head>
 <body>
   <div class="container">
-    <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="BookSKY Logo" class="logo">
-    <h2>BookSKY_NET</h2>
+        <div class="header">
+         <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="BookSKY Logo" class="logo">
+         <h2>BookSKY_NET 2025.2.20</h2>
+        </div>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div id="flash-message">
@@ -122,7 +124,7 @@
       <input type="date" id="workday" name="workday" required>
   
       <button type="submit" id="submitButton">送信</button>
-  </form>
+   </form>
   
   </div>
   <!-- 追加するボタン -->
