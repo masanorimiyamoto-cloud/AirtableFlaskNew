@@ -71,7 +71,7 @@
   <div class="container">
         <div class="header">
          <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="BookSKY Logo" class="logo">
-         <h2>BookSKY_NET 2025.2.20</h2>
+         <h2>BookSKY_NET 2025.3.1</h2>
         </div>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
@@ -86,9 +86,9 @@
     {% endwith %}
 
     <form method="POST">
-      <label for="personid">📌 PersonID:</label>
+      <label for="personid">📌 個人コード:</label>
       <select id="personid" name="personid" required>
-          <option value="">PersonIDを選択してください</option>
+          <option value="">個人コードを選択してください</option>
           {% for id, name in personid_dict.items() %}
               <option value="{{ id }}" {% if id|string == selected_personid|string %}selected{% endif %}>
                   {{ id }} - {{ name }}
@@ -96,7 +96,7 @@
           {% endfor %}
       </select>
   
-      <label for="workcd">🔢 品名コード番号</label>
+      <label for="workcd">🔢 品名コード</label>
       <input type="text" id="workcd" name="workcd" required>
   
       <button type="button" id="fetchWorkNameButton">🔍 品名候補を取得</button>
