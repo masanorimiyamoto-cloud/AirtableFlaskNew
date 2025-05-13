@@ -12,6 +12,7 @@
             background-color: #f4f4f4;
             text-align: center;
             padding: 10px;
+            margin: 0; /* bodyのマージンをリセット */
         }
         .container {
             max-width: 100%;
@@ -50,7 +51,58 @@
             cursor: pointer;
             font-size: 20px;
             margin: 0 5px;
+            padding: 5px; /* クリック範囲を少し広げる */
+            vertical-align: middle; /* 他の要素と垂直方向の中央揃え */
         }
+        .icon-button:hover {
+            opacity: 0.7;
+        }
+
+        /* ナビゲーションとボタンのスタイル */
+        .navigation-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap; /* 画面幅が狭い場合に折り返す */
+        }
+        .nav-button, .action-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            text-decoration: none;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px; /* ボタン間のマージン */
+        }
+        .nav-button:hover, .action-button:hover {
+            background-color: #0056b3;
+        }
+        .month-display {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin: 5px 10px;
+        }
+
+        /* Flashメッセージ */
+        .flash-messages {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 15px;
+        }
+        .flash-messages li {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            color: #fff;
+        }
+        .flash-messages li.success { background-color: #28a745; }
+        .flash-messages li.error { background-color: #dc3545; }
+        .flash-messages li.info { background-color: #17a2b8; }
+        .flash-messages li.warning { background-color: #ffc107; color: #333 }
+
 
         /* スマホ向けスタイル */
         @media (max-width: 768px) {
@@ -61,6 +113,19 @@
             .icon-button {
                 font-size: 18px;
             }
+            .nav-button, .action-button {
+                font-size: 14px;
+                padding: 6px 10px;
+            }
+            .month-display {
+                font-size: 1em;
+            }
+            .navigation-controls {
+                flex-direction: column; /* 縦並びにする */
+            }
+            .navigation-controls > * {
+                margin-bottom: 10px; /* 各要素の下にマージン */
+            }
         }
 
         /* ダークモード */
@@ -70,25 +135,64 @@
         }
         body.dark-mode .container {
             background: #1e1e1e;
+            border: 1px solid #333; /* ダークモード時の区切りを明確に */
         }
         body.dark-mode table {
-            background: #2a2a2a;
+            /* background: #2a2a2a; */ /* テーブル自体の背景はコンテナに合わせる */
             color: white;
         }
         body.dark-mode th {
             background: #333;
+            border-color: #444;
         }
         body.dark-mode td {
-            border: 1px solid #555;
+            border: 1px solid #444; /* ダークモード時のセルの境界線 */
         }
+        body.dark-mode .nav-button, body.dark-mode .action-button {
+            background-color: #0056b3; /* ダークモード時のボタン色調整 */
+        }
+        body.dark-mode .nav-button:hover, body.dark-mode .action-button:hover {
+            background-color: #003d80;
+        }
+        body.dark-mode .flash-messages li.success { background-color: #1e7e34; }
+        body.dark-mode .flash-messages li.error { background-color: #b22222; }
+        body.dark-mode .flash-messages li.info { background-color: #138496; }
+        body.dark-mode .flash-messages li.warning { background-color: #d39e00; color: #fff; }
+
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>{{ personid }} の {{ display_month }} の一覧</h2>
+        <h2>{{ personid }} の記録</h2>
 
-        <!-- ダークモード切り替えボタン -->
-        <button onclick="toggleDarkMode()">🌙 / ☀️</button>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="flash-messages">
+            {% for category, message in messages %}
+              <li class="{{ category }}">{{ message }}</li>
+            {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        <div class="navigation-controls">
+            <a href="{{ url_for('records', year=prev_year, month=prev_month) }}" class="nav-button">＜ 前月</a>
+            <span class="month-display">{{ display_month }}</span>
+            <a href="{{ url_for('records', year=next_year, month=next_month) }}" class="nav-button">次月 ＞</a>
+        </div>
+        
+        <div class="action-buttons" style="margin-bottom: 15px; text-align: center;">
+            <button
+            onclick='location.href="{{ url_for("index") }}"'
+            class="action-button">
+            入力フォームに戻る
+            </button>
+
+              
+                             
+             <button onclick="toggleDarkMode()" class="action-button">🌙 / ☀️</button>
+        </div>
+
 
         <div class="table-container">
             <table>
@@ -105,57 +209,51 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for record in records %}
+                    {% if records %}
+                        {% for record in records %}
+                            <tr>
+                                <td>{{ record.WorkDay }}</td>
+                                <td>{{ record.WorkCD }}</td>
+                                <td>{{ record.WorkName }}</td>
+                                <td>{{ record.WorkProcess }}</td>
+                                <td>{{ "{:,.2f}".format(record.UnitPrice|float) }}</td>
+                                <td>{{ record.WorkOutput }}</td>
+                                <td>{{ "{:,.0f}".format(record.subtotal) }}</td>
+                                <td>
+                                    <a href="{{ url_for('edit_record', record_id=record.id) }}" class="icon-button" title="編集">✏️</a>
+                                    <form method="POST" action="{{ url_for('delete_record', record_id=record.id) }}" style="display:inline;">
+                                        <button type="submit" class="icon-button" title="削除" onclick="return confirm('本当に削除しますか？');">🗑️</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
                         <tr>
-                            <td>{{ record.WorkDay }}</td>
-                            <td>{{ record.WorkCD }}</td>
-                            <td>{{ record.WorkName }}</td>
-                            <td>{{ record.WorkProcess }}</td>
-                            <td>{{ "{:,.2f}".format(record.UnitPrice|float) }}</td>
-                            <td>{{ record.WorkOutput }}</td>
-                            <td>{{ "{:,.0f}".format(record.subtotal) }}</td>
-                            <td>
-                                <a href="{{ url_for('edit_record', record_id=record.id) }}" class="icon-button">✏️</a>
-                                <form method="POST" action="{{ url_for('delete_record', record_id=record.id) }}" style="display:inline;">
-                                    <button type="submit" class="icon-button" onclick="return confirm('本当に削除しますか？');">🗑️</button>
-                                </form>
-                            </td>
+                            <td colspan="8" style="text-align:center; padding: 20px;">この月の記録はありません。</td>
                         </tr>
-                    {% endfor %}
+                    {% endif %}
                 </tbody>
-                <tfoot>
+                {% if records %} <tfoot>
                     <tr>
                         <td colspan="5" style="text-align:right; font-weight:bold;">月勤務日数:</td>
                         <td style="font-weight:bold;">{{ workdays_count }}</td>
-                        <td></td>
-                    </tr>
-                    <tr>
+                        <td colspan="2"></td> </tr>
                     <tr>
                         <td colspan="5" style="text-align:right; font-weight:bold;">WorkOutput合計 (分給対象):</td>
                         <td style="font-weight:bold;">{{ "{:,.2f}".format(workoutput_total) }}</td>
-                        <td></td>
-                    </tr>    
+                        <td colspan="2"></td> </tr>    
                     <tr>
                         <td colspan="6" style="text-align:right; font-weight:bold;">月合計:</td>
                         <td style="font-weight:bold;">{{ "{:,.0f}".format(total_amount) }}</td>
-                        <td></td>
-                    </tr>
+                        <td></td> </tr>
                 </tfoot>
+                {% endif %}
             </table>
         </div>
         <br>
-        <button onclick="location.href='/'">戻る</button>
-    </div>
+        </div>
 
     <script>
-        // ページ内の更新フォーム（または該当のフォーム）を取得
-         const updateForm = document.querySelector("form");
-         const updateButton = document.getElementById("updateButton");
-
-        updateForm.addEventListener("submit", function () {
-        updateButton.innerHTML = "✅ 更新";
-        updateButton.disabled = true;
-        });
         // 🌙 ダークモード切り替え
         function toggleDarkMode() {
             document.body.classList.toggle("dark-mode");
