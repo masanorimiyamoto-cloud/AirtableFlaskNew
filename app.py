@@ -177,9 +177,12 @@ def send_record_to_destination(dest_url, workcord, workname, bookname, workoutpu
     try:
         response = requests.post(dest_url, headers=HEADERS, json=data, timeout=10)
         response.raise_for_status()
-        return response.status_code, "✅ Airtable にデータを送信しました！"
+        resp_json = response.json()
+        new_id = resp_json.get("id")  # ← 追加
+        return response.status_code, "✅ Airtable にデータを送信しました！", new_id
     except requests.RequestException as e:
-        return None, f"⚠ 送信エラー: {str(e)}"
+        return None, f"⚠ 送信エラー: {str(e)}", None
+
 
 # ✅ 一覧のデータ取得 (指定された年月のデータを取得するように変更)
 def get_selected_month_records(target_year, target_month): # 引数に target_year, target_month を追加
@@ -392,7 +395,8 @@ def records(year=None, month=None):
         first_day_of_next_month = date(year, month + 1, 1)
     next_year = first_day_of_next_month.year
     next_month = first_day_of_next_month.month
-    
+    # セッションから new_record_id を取り出し、一度だけハイライト用に使う
+    new_record_id = session.pop('new_record_id', None)
     return render_template(
         "records.html",
         records=records_data,
@@ -403,6 +407,7 @@ def records(year=None, month=None):
         workoutput_total=workoutput_total,
         current_year=year, # テンプレートで現在の年が必要な場合のため
         current_month=month, # テンプレートで現在の月が必要な場合のため
+        new_record_id=new_record_id,
         prev_year=prev_year,
         prev_month=prev_month,
         next_year=next_year,
@@ -414,38 +419,42 @@ def records(year=None, month=None):
 # Flask のルート
 @app.route("/", methods=["GET", "POST"])
 def index():
+    # --- データ読み込み (GET/POST共通) ---
     get_cached_workcord_data()
     personid_dict, personid_list = get_cached_personid_data()
     workprocess_list, unitprice_dict, error = get_workprocess_data()
     if error:
         flash(error, "error")
-        
+
+    # --- POST リクエスト処理 ---
     if request.method == "POST":
+        # フォームデータの取得
         selected_personid = request.form.get("personid", "").strip()
         workcd = request.form.get("workcd", "").strip()
         workoutput = request.form.get("workoutput", "").strip() or "0"
         workprocess = request.form.get("workprocess", "").strip()
         workday = request.form.get("workday", "").strip()
+        selected_option = request.form.get("workname", "").strip()
 
-        error_occurred = False
+        # 変数の初期化 (POST処理でのみ必要)
+        workname, bookname = "", ""
+        workoutput_val = 0
+        error_occurred = False # バリデーションエラーフラグ
+
+        # バリデーションチェック
+        # ... (あなたのバリデーションコードをここに) ...
         if not selected_personid.isdigit() or int(selected_personid) not in personid_list:
             flash("⚠ 有効な PersonID を選択してください！", "error")
             error_occurred = True
-        if not workcd.isdigit():
-            flash("⚠ 品名コードは数値を入力してください！", "error")
-            error_occurred = True
+        # ... 他のバリデーション ...
         try:
             workoutput_val = int(workoutput)
         except ValueError:
             flash("⚠ 数量は数値を入力してください！", "error")
             error_occurred = True
-            workoutput_val = 0 # エラーでも処理継続のためデフォルト値
         if not workprocess or not workday:
-            flash("⚠ 行程と作業日は入力してください！", "error")
-            error_occurred = True
-        
-        selected_option = request.form.get("workname", "").strip()
-        workname, bookname = "", ""
+             flash("⚠ 行程と作業日は入力してください！", "error")
+             error_occurred = True
         if not selected_option and not error_occurred: # 他にエラーがなければチェック
             flash("⚠ 該当する WorkName の選択が必要です！", "error")
             error_occurred = True
@@ -455,52 +464,75 @@ def index():
             except ValueError:
                 flash("⚠ WorkName の選択値に不正な形式が含まれています。", "error")
                 error_occurred = True
-        
+
+        # --- バリデーションエラーが発生した場合 (POST) ---
         if error_occurred:
+            # エラーメッセージと入力値を維持してテンプレートを再描画
             return render_template("index.html",
                                    personid_list=personid_list,
                                    personid_dict=personid_dict,
                                    selected_personid=selected_personid, # POSTされた値を維持
                                    workprocess_list=workprocess_list,
-                                   workday=workday) # POSTされた値を維持
+                                   workday=workday, # POSTされた値を維持
+                                   # 他のPOSTされた値もテンプレートに渡す必要があるかもしれません
+                                   workcd=workcd,
+                                   workoutput=workoutput,
+                                   workprocess=workprocess,
+                                   selected_workname_option=selected_option # ドロップダウンの状態を維持
+                                   )
 
+        # --- バリデーションが成功した場合 (POSTのみ) ---
+        # ここでデータ送信に必要な変数を定義
         dest_table = f"TablePersonID_{selected_personid}"
         dest_url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{dest_table}"
         unitprice = unitprice_dict.get(workprocess, 0)
-        status_code, response_text = send_record_to_destination(
+
+        # データを送信
+        status_code, response_text, new_record_id = send_record_to_destination(
             dest_url, workcd, workname, bookname, workoutput_val, workprocess, unitprice, workday
         )
+
+        # 送信結果の処理
         flash(response_text, "success" if status_code == 200 else "error")
-        
+
+        # セッションに保存 (成功/失敗に関わらず行うか、成功時のみか検討)
         session['selected_personid'] = selected_personid
-        session['workday'] = workday # 最後に送信成功した作業日を保存
-        
-        # 送信成功時は、その作業日が含まれる月のレコードページにリダイレクト
+        session['workday'] = workday
+
         if status_code == 200:
+            # 成功時のみリダイレクト (新規レコードIDも渡す)
+            session['new_record_id'] = new_record_id
             try:
                 workday_dt = datetime.strptime(workday, "%Y-%m-%d")
-                return redirect(url_for("records", year=workday_dt.year, month=workday_dt.month))
-            except ValueError:
-                return redirect(url_for("records")) # 日付パース失敗時はデフォルトへ
-        else: # 送信失敗時
-             return redirect(url_for("index"))
-
-
-    else: # GET request
-        selected_personid_session = session.get('selected_personid', "")
-        session_workday = session.get('workday')
-
-        if session_workday:
-            workday_default = session_workday
+            except ValueError: # strptimeのエラーはValueErrorが適切
+                workday_dt = date.today()
+            return redirect(url_for("records", year=workday_dt.year, month=workday_dt.month))
         else:
-            workday_default = (date.today() - timedelta(days=30)).strftime("%Y-%m-%d")
+            # 失敗時はindexにリダイレクト (GETリクエストとして再度処理される)
+            # あるいは、POSTエラー時と同様にテンプレートを再描画しても良い
+            return redirect(url_for("index")) # このリダイレクトで以下のGET処理が実行される
 
-        return render_template("index.html",
-                               workprocess_list=workprocess_list,
-                               personid_list=personid_list,
-                               personid_dict=personid_dict,
-                               selected_personid=selected_personid_session,
-                               workday=workday_default)
+    # --- GET リクエスト処理 (またはPOST失敗からのリダイレクト) ---
+    # このブロックは、GETリクエスト時、またはPOST処理が上記でreturn/redirectせずに
+    # ここに到達した場合 (本来は起こらないようにする)、
+    # あるいはPOST失敗後のリダイレクトでindexにGETリクエストとして戻ってきた場合に実行される。
+
+    selected_personid_session = session.get('selected_personid', "")
+    session_workday = session.get('workday')
+
+    if session_workday:
+        workday_default = session_workday
+    else:
+        # 最初の表示用またはセッションにない場合のデフォルト値
+        workday_default = (date.today() - timedelta(days=30)).strftime("%Y-%m-%d")
+
+    # テンプレートの描画 (初期表示、またはPOST失敗後の再表示用)
+    return render_template("index.html",
+                           workprocess_list=workprocess_list,
+                           personid_list=personid_list,
+                           personid_dict=personid_dict,
+                           selected_personid=selected_personid_session, # セッション値を使用
+                           workday=workday_default) # デフォルト値またはセッション値を使用
 
 
 if __name__ == "__main__":
