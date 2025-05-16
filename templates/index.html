@@ -33,12 +33,13 @@
       margin-top: 5px;
       border: 1px solid #ccc;
       border-radius: 5px;
-      font-size: 20px;
+      font-size: 20px; /* フォーム要素のフォントサイズを大きくする */
+      box-sizing: border-box; /* paddingを含めてwidth 100%にする */
     }
     button {
       background-color: #007bff;
       color: white;
-      font-size: 18px;
+      font-size: 18px; /* ボタンのフォントサイズ */
       border: none;
       cursor: pointer;
       margin-top: 15px;
@@ -64,6 +65,16 @@
       background-color: #f8d7da;
       color: #721c24;
       border: 1px solid #f5c6cb;
+    }
+    /* ロゴとタイトルのためのスタイル */
+    .header {
+        text-align: center; /* 中央揃え */
+        margin-bottom: 20px; /* 下のマージン */
+    }
+    .logo {
+        max-width: 100px; /* ロゴの最大幅 */
+        height: auto; /* 高さを自動調整 */
+        margin-bottom: 10px; /* ロゴとタイトルの間 */
     }
   </style>
 </head>
@@ -97,170 +108,226 @@
       </select>
   
       <label for="workcd">🔢 品名コード番号</label>
-      <input type="text" id="workcd" name="workcd" required>
+      <input type="text" id="workcd" name="workcd" value="{{ workcd if workcd is defined else '' }}">
   
       <button type="button" id="fetchWorkNameButton">🔍 品名候補を取得</button>
   
       <label for="workname">📄 品名:</label>
       <select id="workname" name="workname" required>
           <option value="">該当する 品名を選択してください</option>
+          {# JavaScriptで動的に候補が設定される。送信失敗時に選択値を復元する場合、サーバーサイドでの処理が必要 #}
+          {% if selected_workname_option %}
+              {# この部分は、サーバー側で selected_workname_option を元に適切な option を生成する必要があるかも #}
+              {# もし selected_workname_option が 'workname||bookname' の形式なら、それを元に表示できる #}
+              {% set parts = selected_workname_option.split('||') %}
+              {% if parts|length == 2 %}
+                  <option value="{{ selected_workname_option }}" selected>{{ parts[0] }}{% if parts[1] %} ({{ parts[1] }}){% endif %}</option>
+              {% else %}
+                  <option value="{{ selected_workname_option }}" selected>{{ selected_workname_option }}</option>
+              {% endif %}
+          {% endif %}
       </select>
   
       <label for="workprocess">🛠 行程名:</label>
       <select id="workprocess" name="workprocess" required>
           <option value="">行程名を選択してください</option>
           {% for item in workprocess_list %}
-              <option value="{{ item }}">{{ item }}</option>
+              <option value="{{ item }}" {% if item == workprocess %}selected{% endif %}>{{ item }}</option>
           {% endfor %}
       </select>
   
       <label for="unitprice">💰 単価:</label>
-      <input type="text" id="unitprice" name="unitprice" readonly>
+      <input type="text" id="unitprice" name="unitprice" readonly value="{{ unitprice if unitprice is defined else '' }}">
   
       <label for="workoutput">📦 数量（個、分）:</label>
-      <input type="text" id="workoutput" name="workoutput">
-
+      <input type="text" id="workoutput" name="workoutput" value="{{ workoutput if workoutput is defined else '' }}">
   
       <label for="workday">📅 作業日:</label>
-      <input type="date" id="workday" name="workday" required>
+      <input type="date" id="workday" name="workday" value="{{ workday if workday is defined else '' }}" required>
   
       <button type="submit" id="submitButton">送信</button>
-   </form>
+    </form>
   
   </div>
-  <!-- 追加するボタン -->
-  <button type="button" onclick="location.href='/records'">入力一覧確認</button>
+  <button type="button" id="viewRecordsButton" style="margin-top: 15px; font-size: 18px;">入力一覧確認</button>
 
-  <!-- JavaScript 部分 -->
   <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      const personidSelect = document.getElementById("personid");
-      const workcdInput = document.getElementById("workcd");
-      const worknameSelect = document.getElementById("workname");
-      const fetchWorkNameButton = document.getElementById("fetchWorkNameButton");
-      const workprocessSelect = document.getElementById("workprocess");
-      const workdayInput = document.getElementById("workday");
-    // ✅ 直前の WorkProcess を取得 & 設定
-    const lastWorkProcess = localStorage.getItem("lastWorkProcess");
-    if (lastWorkProcess) {
-        workprocessSelect.value = lastWorkProcess;
-        fetchUnitPrice(); // ✅ WorkProcess をセットした後に UnitPrice を取得
-    }
+  document.addEventListener("DOMContentLoaded", function () {
+    const personidSelect = document.getElementById("personid");
+    const workcdInput = document.getElementById("workcd");
+    const worknameSelect = document.getElementById("workname");
+    const fetchWorkNameButton = document.getElementById("fetchWorkNameButton");
+    const workprocessSelect = document.getElementById("workprocess");
+    const workdayInput = document.getElementById("workday");
+    const unitpriceInput = document.getElementById("unitprice");
     const submitButton = document.getElementById("submitButton");
-　　document.querySelector("form").addEventListener("submit", function () {
-  　submitButton.innerHTML = "✅ 送信";
-  　submitButton.disabled = true; // 重複送信防止のためボタンを無効化
-　　});
 
-    // ✅ WorkProcess が変更されたら、新しい値を保存
-    workprocessSelect.addEventListener("change", function () {
-        localStorage.setItem("lastWorkProcess", workprocessSelect.value);
-        fetchUnitPrice(); // ✅ WorkProcess が変更されたら UnitPrice を更新
+    // フォーム送信時の処理
+    document.querySelector("form").addEventListener("submit", function () {
+      submitButton.innerHTML = "✅ 送信中..."; // 送信中に表示を変更
+      submitButton.disabled = true; // 重複送信防止のためボタンを無効化
     });
-      const unitpriceInput = document.getElementById("unitprice");
 
-      fetchWorkNameButton.addEventListener("click", function () {
-        fetchWorkNames();
-      });
-
-      workprocessSelect.addEventListener("change", function () {
-        fetchUnitPrice();
-      });
-    // ✅ 直前の WorkDay を取得 & 設定
-    const lastWorkDay = localStorage.getItem("lastWorkDay");
-    if (lastWorkDay) {
-        workdayInput.value = lastWorkDay; // ✅ WorkDay を前回の値に設定
-    }
-
-    // ✅ WorkDay が変更されたら、新しい値を保存
-    workdayInput.addEventListener("change", function () {
-        localStorage.setItem("lastWorkDay", workdayInput.value);
-    });
-    // ✅ PersonID のリセット & ページ遷移の区別
-    if (!sessionStorage.getItem("pageLoaded")) {
-        // 初回ロード時のみリセット（リロード扱い）
-        localStorage.removeItem("lastPersonID");
-        sessionStorage.setItem("pageLoaded", "true");
-    } else {
-        // ページ遷移時は PersonID を保持
+    // --- localStorageからの値の復元 ---
+    // PersonID
+    // Flaskから渡されたselected_personidがある場合はそれを優先し、なければlocalStorageの値を使用
+    if (!personidSelect.value) { // Flask側でselectedが指定されていない場合
         const lastPersonID = localStorage.getItem("lastPersonID");
         if (lastPersonID) {
             personidSelect.value = lastPersonID;
         }
     }
-
-    // ✅ PersonID が変更されたら保存
     personidSelect.addEventListener("change", function () {
         localStorage.setItem("lastPersonID", personidSelect.value);
     });
-  function fetchWorkNames() {
-    const workcd = workcdInput.value.trim();
-    console.log("候補を取得: workcd =", workcd);
-    fetchWorkNameButton.innerText = "候補を取得";
-    worknameSelect.innerHTML = '<option value="">品名を選択してください。</option>';
 
-    if (workcd === "") {
-        return;
+    // WorkProcess
+    const lastWorkProcess = localStorage.getItem("lastWorkProcess");
+    if (lastWorkProcess && !workprocessSelect.value) { // Flask側でselectedが指定されていない場合
+        workprocessSelect.value = lastWorkProcess;
     }
+    if (workprocessSelect.value) { // 初期値または復元値があれば単価を取得
+        fetchUnitPrice();
+    }
+    workprocessSelect.addEventListener("change", function () {
+        localStorage.setItem("lastWorkProcess", workprocessSelect.value);
+        fetchUnitPrice();
+    });
 
-    fetch(`/get_worknames?workcd=${workcd}`)
+    // WorkDay
+    // Flaskから渡されたworkdayがある場合はそれを優先 (input type="date" の value属性で設定済み)
+    // なければlocalStorageの値を使用
+    if (!workdayInput.value) {
+        const lastWorkDay = localStorage.getItem("lastWorkDay");
+        if (lastWorkDay) {
+            workdayInput.value = lastWorkDay;
+        }
+    }
+    workdayInput.addEventListener("change", function () {
+        localStorage.setItem("lastWorkDay", workdayInput.value);
+    });
+
+    // --- イベントリスナー ---
+    fetchWorkNameButton.addEventListener("click", function () {
+      fetchWorkNames();
+    });
+
+    // --- 関数定義 ---
+    function fetchWorkNames() {
+      const workcd = workcdInput.value.trim();
+      console.log("候補を取得: workcd =", workcd);
+      fetchWorkNameButton.innerText = "🔍 品名候補を取得中..."; // ボタンのテキスト変更
+      worknameSelect.innerHTML = '<option value="">品名を選択してください。</option>';
+
+      if (workcd === "") {
+        fetchWorkNameButton.innerText = "🔍 品名候補を取得"; // ボタンのテキストを元に戻す
+        return;
+      }
+
+      fetch(`/get_worknames?workcd=${encodeURIComponent(workcd)}`)
         .then(response => response.json())
         .then(data => {
-            console.log("取得結果:", data);
-            if (!data || typeof data.worknames === "undefined") {
-                alert("サーバからのレスポンスが不正です: " + JSON.stringify(data));
-                return;
-            }
-            if (data.error) {
-                alert(data.error);
-                return;
-            }
+          console.log("取得結果:", data);
+          if (!data || typeof data.worknames === "undefined") {
+            alert("サーバからのレスポンスが不正です: " + JSON.stringify(data));
+            fetchWorkNameButton.innerText = "🔍 品名候補を取得";
+            return;
+          }
+          if (data.error) {
+            alert(data.error);
+            fetchWorkNameButton.innerText = "🔍 品名候補を取得";
+            return;
+          }
 
-            const records = data.worknames;
-            if (records.length === 0) {
-                alert("該当する WorkName が見つかりません");
-                return;
-            }
+          const records = data.worknames;
+          if (records.length === 0) {
+            alert("該当する WorkName が見つかりません");
+            fetchWorkNameButton.innerText = "🔍 品名候補を取得";
+            return;
+          }
 
-            // ✅ 候補リストを展開
-            fetchWorkNameButton.innerText = records.length + "件見つかりました。";
-            records.forEach(record => {
-                const option = document.createElement("option");
-                option.value = record.workname + "||" + record.bookname;
-                option.text = record.workname + (record.bookname ? " (" + record.bookname + ")" : "");
-                worknameSelect.appendChild(option);
-            });
+          fetchWorkNameButton.innerText = records.length + "件見つかりました。";
+          records.forEach(record => {
+            const option = document.createElement("option");
+            option.value = record.workname + "||" + record.bookname;
+            option.text = record.workname + (record.bookname ? " (" + record.bookname + ")" : "");
+            worknameSelect.appendChild(option);
+          });
 
-            // ✅ 候補が1件だけなら自動選択
-            if (records.length === 1) {
-                worknameSelect.value = records[0].workname + "||" + records[0].bookname;
-                workprocessSelect.focus(); // ✅ すぐに WorkProcess へ移動
-            } else {
-                worknameSelect.focus(); // ✅ リストボックスを自動フォーカス
-            }
+          if (records.length === 1) {
+            worknameSelect.value = records[0].workname + "||" + records[0].bookname;
+            workprocessSelect.focus();
+          } else {
+            worknameSelect.focus();
+          }
         })
-        .catch(error => console.error("エラー:", error));
-　　}
+        .catch(error => {
+            console.error("エラー:", error);
+            alert("品名候補の取得中にエラーが発生しました。");
+            fetchWorkNameButton.innerText = "🔍 品名候補を取得";
+        });
+    }
 
-
-      function fetchUnitPrice() {
-        const workprocess = workprocessSelect.value;
-        if (workprocess === "") {
-          unitpriceInput.value = "";
-          return;
-        }
-        fetch(`/get_unitprice?workprocess=${encodeURIComponent(workprocess)}`)
-          .then(response => response.json())
-          .then(data => {
-            if (data.error) {
-              unitpriceInput.value = "";
-            } else {
-              unitpriceInput.value = data.unitprice;
-            }
-          })
-          .catch(error => console.error("エラー:", error));
+    function fetchUnitPrice() {
+      const workprocess = workprocessSelect.value;
+      if (workprocess === "") {
+        unitpriceInput.value = "";
+        return;
       }
-    });
+      fetch(`/get_unitprice?workprocess=${encodeURIComponent(workprocess)}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.error) {
+            unitpriceInput.value = "";
+            // alert(data.error); // 必要に応じてエラー表示
+          } else {
+            unitpriceInput.value = data.unitprice;
+          }
+        })
+        .catch(error => {
+            console.error("単価取得エラー:", error);
+            unitpriceInput.value = "";
+            // alert("単価の取得中にエラーが発生しました。");
+        });
+    }
+
+    // 修正: 「入力一覧確認」ボタンの処理
+    const viewRecordsButton = document.getElementById("viewRecordsButton");
+    if (viewRecordsButton) {
+        viewRecordsButton.addEventListener("click", function() {
+            const selectedPersonIDValue = personidSelect.value;
+            if (selectedPersonIDValue) {
+                // PersonIDが選択されていれば、クエリパラメータとして付けて画面遷移
+                location.href = `/records?personid=${encodeURIComponent(selectedPersonIDValue)}`;
+            } else {
+                // PersonIDが選択されていなければ、アラートを表示して遷移しないか、
+                // もしくはそのまま /records へ遷移（サーバー側でindexへリダイレクトされる想定）
+                alert("PersonIDを選択してください。");
+                // location.href = '/records'; // PersonID未選択でも遷移させたい場合はこちら
+            }
+        });
+    }
+
+    // ページロード時の初回 sessionStorage pageLoaded の設定ロジックは、
+    // localStorage の PersonID を不用意にクリアしないようにするため、一旦削除または見直しました。
+    // Flaskから渡される selected_personid を優先し、それが無い場合にlocalStorageの値を使うようにしています。
+    // もし初回アクセス時に localStorage の lastPersonID をクリアしたい明確な理由があれば、
+    // sessionStorage.clear(); のような処理をページの最初に入れることを検討してください。
+    // ただし、現状のロジックではFlaskからの値があればそれが優先されます。
+
+    // フォーム送信失敗で戻ってきた場合に、WorkCDが入力されていれば品名候補を再取得する処理 (任意)
+    if (workcdInput.value.trim() !== "" && worknameSelect.options.length <= 1) { // 初期状態(選択肢が1つ以下)の場合
+        // selected_workname_option があれば、それを復元する処理がHTML側にあるので、
+        // ここで無条件に fetchWorkNames() を呼ぶと、それが上書きされる可能性がある。
+        // Flask側で workname の選択肢自体を渡していないので、
+        // ここで fetchWorkNames を呼んで候補を再表示するのが自然。
+        // ただし、エラーで戻ってきたときに、以前の選択が `selected_workname_option` に入っているはずなので、
+        // その値と候補が一致すればそれを選択状態にしたいが、それは fetchWorkNames 内では難しい。
+        // 現状は、候補を再取得し、もし以前の選択があればユーザーに再選択してもらう形になる。
+        // fetchWorkNames(); // 必要に応じてコメントを外す
+    }
+
+  });
   </script>
 </body>
 </html>

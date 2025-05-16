@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ personid }} の {{ display_month }} の一覧</title>
+    <title>{{ personid_dict.get(personid|int, personid + "番") }} さんの {{ display_month }} の一覧</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
     <style>
         /* 基本レイアウト */
@@ -12,7 +12,7 @@
             background-color: #f4f4f4;
             text-align: center;
             padding: 10px;
-            margin: 0; /* bodyのマージンをリセット */
+            margin: 0;
         }
         .container {
             max-width: 100%;
@@ -23,9 +23,8 @@
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
             text-align: left;
         }
-        /* テーブルのレスポンシブ対応 */
         .table-container {
-            overflow-x: auto; /* 横スクロールを許可 */
+            overflow-x: auto;
         }
         table {
             width: 100%;
@@ -36,34 +35,34 @@
             border: 1px solid #ddd;
             padding: 8px;
             text-align: center;
-            font-size: 18px; /* スマホ向けに小さめのフォント */
+            font-size: 16px; /* テーブルの基本フォントサイズ */
         }
         th {
             background-color: #007bff;
             color: white;
         }
-        /* アイコンボタン */
         .icon-button {
             background: none;
             border: none;
             cursor: pointer;
             font-size: 20px;
             margin: 0 5px;
-            padding: 5px; /* クリック範囲を少し広げる */
-            vertical-align: middle; /* 他の要素と垂直方向の中央揃え */
+            padding: 5px;
+            vertical-align: middle;
         }
         .icon-button:hover {
             opacity: 0.7;
         }
-        /* ナビゲーションとボタンのスタイル */
+
+        /* ナビゲーションコントロール */
         .navigation-controls {
             display: flex;
-            justify-content: space-between;
+            justify-content: space-between; /* PCでは左右に配置 */
             align-items: center;
             margin-bottom: 15px;
-            flex-wrap: wrap; /* 画面幅が狭い場合に折り返す */
+            flex-wrap: wrap; /* 必要に応じて折り返し */
         }
-        .nav-button, .action-button {
+        .nav-button {
             background-color: #007bff;
             color: white;
             border: none;
@@ -71,70 +70,136 @@
             border-radius: 5px;
             text-decoration: none;
             cursor: pointer;
-            font-size: 18px;
-            margin: 5px; /* ボタン間のマージン */
+            font-size: 16px;
+            margin: 5px;
+            white-space: nowrap;
         }
-        .nav-button:hover, .action-button:hover {
+        .nav-button:hover {
             background-color: #0056b3;
         }
         .month-display {
             font-size: 1.2em;
             font-weight: bold;
             margin: 5px 10px;
+            white-space: nowrap;
+            flex-grow: 1; /* 中央のスペースを埋めるように */
+            text-align: center; /* 月表示を中央に */
         }
+
+        /* アクションボタンコンテナ（入力画面に戻るなど） */
+        .action-buttons-container {
+            display: flex;
+            justify-content: center; /* ボタンを中央揃え */
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .action-button { /* .nav-button と共通化しても良い */
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            text-decoration: none;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        .action-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Flashメッセージのスタイル */
+        .flash-message-item {
+            padding: 10px;
+            margin-bottom: 10px; /* 各メッセージ間のマージン */
+            border-radius: 5px;
+            text-align: center;
+            border: 1px solid transparent;
+        }
+        .flash-message-item.success {
+            background-color: #d4edda; color: #155724; border-color: #c3e6cb;
+        }
+        .flash-message-item.error {
+            background-color: #f8d7da; color: #721c24; border-color: #f5c6cb;
+        }
+        .flash-message-item.info { /* info カテゴリ用 */
+            background-color: #cce5ff; color: #004085; border-color: #b8daff;
+        }
+        .flash-message-item.warning { /* warning カテゴリ用 */
+            background-color: #fff3cd; color: #856404; border-color: #ffeeba;
+        }
+
+
         /* スマホ向けスタイル */
         @media (max-width: 768px) {
             th, td {
                 padding: 6px;
-                font-size: 16px;
+                font-size: 14px; /* スマホではテーブルフォントを少し小さく */
             }
             .icon-button {
                 font-size: 18px;
             }
             .nav-button, .action-button {
-                font-size: 18px;
-                padding: 6px 10px;
+                font-size: 14px; /* スマホではボタンフォントを少し小さく */
+                padding: 7px 10px; /* パディングも少し調整 */
             }
             .month-display {
-                font-size: 1em;
+                font-size: 1.1em; /* 月表示も少し小さく */
+                margin: 5px; /* マージン調整 */
             }
             .navigation-controls {
-                flex-direction: column; /* 縦並びにする */
+                justify-content: center; /* スマホでは全体を中央揃え */
+            }
+            /* .navigation-controls > * の margin-bottom は削除し、各要素のmarginで調整 */
+        }
+        @media (max-width: 480px) { /* さらに狭い画面用の調整 */
+            .navigation-controls {
+                flex-direction: column; /* 本当に狭い場合は縦並びに戻すことも検討 */
+                align-items: center;
             }
             .navigation-controls > * {
-                margin-bottom: 10px; /* 各要素の下にマージン */
+                margin-bottom: 8px;
+            }
+            .month-display {
+                order: -1; /* 月表示を一番上に持ってくる場合 (縦並びの時) */
+                margin-bottom: 8px;
+            }
+            .nav-button {
+                width: 80%; /* ボタン幅を広げる */
+                text-align: center;
             }
         }
-         /* 新規追加レコードを目立たせる */
+
+        /* 新規追加レコードを目立たせる */
         .highlight {
-        background-color: #fffaac;
-        transition: background-color 1s ease;
+            background-color: #fffaac !important; /* !important で他のスタイルを上書き */
+            transition: background-color 2s ease-out; /* トランジションを長く */
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>{{ personid }} 番さんの記録</h2>
+        <h2>{{ personid_dict.get(personid|int, personid + " 番") }} さんの記録</h2>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
-            <ul class="flash-messages">
+            <div id="flash-messages-container" style="margin-bottom:15px;">
             {% for category, message in messages %}
-              <li class="{{ category }}">{{ message }}</li>
+              <p class="flash-message-item {{ category }}">{{ message }}</p>
             {% endfor %}
-            </ul>
+            </div>
           {% endif %}
         {% endwith %}
 
         <div class="navigation-controls">
-            <a href="{{ url_for('records', year=prev_year, month=prev_month) }}" class="nav-button">＜ 前月</a>
+            <a href="{{ url_for('records', year=prev_year, month=prev_month, personid=personid) }}" class="nav-button">＜ 前月</a>
             <span class="month-display">{{ display_month }}</span>
-            <a href="{{ url_for('records', year=next_year, month=next_month) }}" class="nav-button">次月 ＞</a>
+            <a href="{{ url_for('records', year=next_year, month=next_month, personid=personid) }}" class="nav-button">次月 ＞</a>
         </div>
         
-        <div class="action-buttons" style="margin-bottom: 15px; text-align: center;">
+        <div class="action-buttons-container">
             <button
-                onclick="location.href='{{ url_for('index') }}'"
+                onclick='location.href="{{ url_for("index", personid=personid) }}"'
                 class="action-button">
                 入力画面に戻る
             </button>
@@ -157,16 +222,16 @@
                 <tbody>
                     {% if records %}
                         {% for record in records %}
-                            <tr {% if record.id == new_record_id %}class="highlight"{% endif %}>
+                            <tr id="record-{{ record.id }}" {% if record.id == new_record_id %}class="highlight"{% endif %}>
                                 <td>{{ record.WorkDay }}</td>
                                 <td>{{ record.WorkCD }}</td>
                                 <td>{{ record.WorkName }}</td>
                                 <td>{{ record.WorkProcess }}</td>
-                                <td>{{ "{:,.2f}".format(record.UnitPrice|float) }}</td>
+                                <td>{{ "{:,.2f}".format(record.UnitPrice|float) if record.UnitPrice != "不明" and record.UnitPrice is not none else "0.00" }}</td>
                                 <td>{{ record.WorkOutput }}</td>
                                 <td>{{ "{:,.0f}".format(record.subtotal) }}</td>
                                 <td>
-                                    <a href="{{ url_for('edit_record', record_id=record.id) }}" class="icon-button" title="編集">✏️</a>
+                                    <a href="{{ url_for('edit_record', record_id=record.id, year=current_year, month=current_month) }}" class="icon-button" title="編集">✏️</a>
                                     <form method="POST" action="{{ url_for('delete_record', record_id=record.id) }}" style="display:inline;">
                                         <button type="submit" class="icon-button" title="削除" onclick="return confirm('本当に削除しますか？');">🗑️</button>
                                     </form>
@@ -188,7 +253,7 @@
                     </tr>
                     <tr>
                         <td colspan="5" style="text-align:right; font-weight:bold;">WorkOutput合計 (分給対象):</td>
-                        <td style="font-weight:bold;">{{ "{:,.2f}".format(workoutput_total) }}</td>
+                        <td style="font-weight:bold;">{{ "{:,.2f}".format(workoutput_total|float) }}</td>
                         <td colspan="2"></td>
                     </tr>
                     <tr>
@@ -202,5 +267,30 @@
         </div>
         <br>
     </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const newRecordId = "{{ new_record_id }}";
+        if (newRecordId) {
+            const highlightedRow = document.getElementById(`record-${newRecordId}`);
+            if (highlightedRow) {
+                setTimeout(() => {
+                    highlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                }, 100);
+            }
+        }
+
+        const flashMessagesContainer = document.getElementById('flash-messages-container');
+        if (flashMessagesContainer && flashMessagesContainer.children.length > 0) {
+            setTimeout(() => {
+                flashMessagesContainer.style.transition = 'opacity 1s ease';
+                flashMessagesContainer.style.opacity = '0';
+                setTimeout(() => {
+                    flashMessagesContainer.style.display = 'none';
+                }, 1000);
+            }, 3000); // 3秒後に消し始める
+        }
+    });
+    </script>
 </body>
 </html>
