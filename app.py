@@ -134,13 +134,52 @@ def get_workprocess_data():
 def get_worknames():
     data = get_cached_workcord_data()
     workcd = request.args.get("workcd", "").strip()
+    results = []
+
+    if not workcd:
+        return jsonify({"worknames": results, "error": ""})
+
+    # 数値チェックを追加
     try:
         workcd_num = int(workcd)
-        workcd_key = str(workcd_num)
+        workcd = str(workcd_num)
     except ValueError:
-        return jsonify({"worknames": [], "error": "⚠ WorkCD は数値で入力してください！"})
-    records = data.get(workcd_key, [])
-    return jsonify({"worknames": records, "error": ""})
+        return jsonify({"worknames": [], "error": "WorkCDは数値で入力してください"})
+
+    # 部分一致検索ロジックを修正
+    if len(workcd) >= 3:
+        # 完全一致を優先
+        if workcd in data:
+            for item in data[workcd]:
+                results.append({
+                    "code": workcd,
+                    "workname": item["workname"],
+                    "bookname": item["bookname"]
+                })
+        
+        # 部分一致検索（前方一致）
+        for key in data.keys():
+            if key.startswith(workcd) and key != workcd:
+                for item in data[key]:
+                    results.append({
+                        "code": key,
+                        "workname": item["workname"],
+                        "bookname": item["bookname"]
+                    })
+
+    return jsonify({"worknames": results, "error": ""})
+
+# Flaskのルート例
+@app.route('/records/<year>/<month>')
+def show_records(year, month):
+    # 最新のレコードをハイライト用にマーク
+    records = get_records_from_db()
+    if 'new_id' in request.args:
+        for record in records:
+            if record.id == request.args['new_id']:
+                record.highlight = True
+    return render_template('records.html', records=records)
+
 
 # -------------------------------
 # WorkProcess に対応する UnitPrice を取得する API
@@ -234,21 +273,32 @@ def delete_record(record_id):
     selected_personid = session.get("selected_personid")
     if not selected_personid:
         flash("❌ PersonIDが選択されていません。操作を続行できません。", "error")
-        return redirect(url_for("index")) 
+        return redirect(url_for("index"))
 
-    table_name = f"TablePersonID_{selected_personid}"
-    
+    # Airtable 削除処理（省略）…
     try:
-        response = requests.delete(f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{table_name}/{record_id}", headers=HEADERS)
-        response.raise_for_status() 
+        table_name = f"TablePersonID_{selected_personid}"
+        resp = requests.delete(
+            f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{table_name}/{record_id}",
+            headers=HEADERS
+        )
+        resp.raise_for_status()
         flash("✅ レコードを削除しました！", "success")
     except requests.RequestException as e:
         flash(f"❌ 削除に失敗しました: {e}", "error")
-        print(f"❌ Airtable 削除エラー: {e}")
 
-    # 削除後、最後に表示していた月、またはデフォルトの月にリダイレクト
-    # records ルートがよしなに処理してくれることを期待
-    return redirect(url_for("records"))
+    # フォームから年・月を取り出す
+    try:
+        year  = int(request.form.get("year"))
+        month = int(request.form.get("month"))
+    except (TypeError, ValueError):
+        # 万一取れなかったらセッションの current_display をフォールバック
+        year  = session.get("current_display_year")
+        month = session.get("current_display_month")
+
+    # 削除後は必ず同じ年月で一覧を再表示
+    return redirect(url_for("records", year=year, month=month))
+
 
 
 # ✅ レコードの修正ページ
@@ -260,66 +310,78 @@ def edit_record(record_id):
         return redirect(url_for("index"))
 
     table_name = f"TablePersonID_{selected_personid}"
-    
-    # GETリクエスト時に、戻り先となる年/月をURLパラメータから取得する試み
-    # edit_record.html側でこの情報をフォームにhiddenで含め、POST時に送り返してもらう想定
-    original_year = request.args.get('year', session.get('current_display_year'))
+
+    # GET時の戻り先年月取得
+    original_year  = request.args.get('year',  session.get('current_display_year'))
     original_month = request.args.get('month', session.get('current_display_month'))
 
-
     if request.method == "POST":
-        updated_data = {
-            "fields": {
-                "WorkDay": request.form.get("WorkDay"),
-                "WorkOutput": int(request.form.get("WorkOutput", 0)),
-            }
+        # フォームから「編集前／編集後」を取得
+        orig_day    = request.form.get("original_WorkDay", "")
+        orig_output = request.form.get("original_WorkOutput", "")
+        new_day     = request.form.get("WorkDay", "")
+        new_output  = request.form.get("WorkOutput", "")
+
+        # Airtable へ PATCH
+        updated_fields = {
+            "WorkDay": new_day,
+            "WorkOutput": int(new_output)
         }
         try:
-            response = requests.patch(f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{table_name}/{record_id}",
-                                      headers=HEADERS, json=updated_data)
-            response.raise_for_status()
-            flash("✅ レコードを更新しました！", "success")
+            resp = requests.patch(
+                f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{table_name}/{record_id}",
+                headers=HEADERS,
+                json={"fields": updated_fields}
+            )
+            resp.raise_for_status()
+
+            # 差分を作成
+            changes = []
+            if orig_day    != new_day:
+                changes.append(f"作業日：{orig_day}→{new_day}")
+            if str(orig_output) != str(new_output):
+                changes.append(f"作業量：{orig_output}→{new_output}")
+
+            detail = "、".join(changes) if changes else "（変更なし）"
+            flash(f"✅ レコードを更新しました！ 更新内容：{detail}", "success")
+
+            session['edited_record_id'] = record_id
+
         except requests.RequestException as e:
-            error_message = e.response.json() if e.response else str(e)
-            flash(f"❌ 更新に失敗しました: {error_message}", "error")
-            print(f"❌ Airtable 更新エラー: {error_message}")
-        
-        # 更新後、どの月の表示に戻るか
-        # フォームから送り返された original_year/month または更新後のWorkDayの年月を使用
-        redirect_year_str = request.form.get("original_year", original_year)
-        redirect_month_str = request.form.get("original_month", original_month)
-        
-        updated_workday_str = request.form.get("WorkDay")
-        if updated_workday_str:
-            try:
-                updated_workday_dt = datetime.strptime(updated_workday_str, "%Y-%m-%d")
-                redirect_year_str = str(updated_workday_dt.year)
-                redirect_month_str = str(updated_workday_dt.month)
-            except ValueError:
-                pass # 不正な日付なら元の月情報を使う
+            err = e.response.json() if e.response else str(e)
+            flash(f"❌ 更新に失敗しました: {err}", "error")
 
-        if redirect_year_str and redirect_month_str:
-            try:
-                return redirect(url_for("records", year=int(redirect_year_str), month=int(redirect_month_str)))
-            except ValueError:
-                pass # int変換失敗時
-        return redirect(url_for("records")) # デフォルト表示に戻す
+        # リダイレクト先決定（更新後の年月 or 元の年月）
+        try:
+            dt = datetime.strptime(new_day, "%Y-%m-%d")
+            return redirect(url_for("records", year=dt.year, month=dt.month))
+        except:
+            return redirect(url_for("records"))
 
-    # GETリクエスト (編集対象レコード取得)
+    # --- GET リクエスト時: 編集フォーム表示用データ取得 ---
     try:
-        response = requests.get(f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{table_name}/{record_id}",
-                                headers=HEADERS)
-        response.raise_for_status()
-        record_data = response.json().get("fields", {})
-        if not record_data:
-             flash(f"❌ 編集対象のレコード (ID: {record_id}) が見つかりません。", "error")
-             return redirect(url_for("records", year=original_year, month=original_month) if original_year and original_month else url_for("records"))
-    except requests.RequestException as e:
-        flash(f"❌ 編集対象レコードの取得に失敗しました: {e}", "error")
-        return redirect(url_for("records", year=original_year, month=original_month) if original_year and original_month else url_for("records"))
-        
-    return render_template("edit_record.html", record=record_data, record_id=record_id,
-                           original_year=original_year, original_month=original_month)
+        resp = requests.get(
+            f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{table_name}/{record_id}",
+            headers=HEADERS
+        )
+        resp.raise_for_status()
+        record_data = resp.json().get("fields", {})
+    except Exception as e:
+        flash(f"❌ レコード取得に失敗しました: {e}", "error")
+        return redirect(url_for(
+            "records",
+            year=original_year,
+            month=original_month
+        ))
+
+    return render_template(
+        "edit_record.html",
+        record=record_data,
+        record_id=record_id,
+        original_year=original_year,
+        original_month=original_month
+    )
+
 
 
 # 🆕 **一覧表示のルート (前月・次月機能対応)**
@@ -436,7 +498,18 @@ def records(year=None, month=None):
     next_year = first_day_of_next_month.year
     next_month = first_day_of_next_month.month
     
-    new_record_id = session.pop('new_record_id', None)
+    new_record_id_from_session = session.pop('new_record_id', None) # 変更箇所：変数名を変更して明確化
+    edited_record_id_from_session = session.pop('edited_record_id', None) # 変更箇所：変数名を変更して明確化
+
+    # --- ここにデバッグプリントを追加 ---
+    print(f"--- PYTHON DEBUG IN /records ROUTE ---")
+    print(f"Value of new_record_id_from_session: {new_record_id_from_session}")
+    print(f"Type of new_record_id_from_session: {type(new_record_id_from_session)}")
+    print(f"Value of edited_record_id_from_session: {edited_record_id_from_session}")
+    print(f"Type of edited_record_id_from_session: {type(edited_record_id_from_session)}")
+    print(f"------------------------------------")
+    # --- デバッグプリントここまで ---
+
     return render_template(
         "records.html",
         records=records_data,
@@ -448,7 +521,8 @@ def records(year=None, month=None):
         workoutput_total=workoutput_total,
         current_year=year, 
         current_month=month, 
-        new_record_id=new_record_id,
+        new_record_id=new_record_id_from_session,
+        edited_record_id=edited_record_id_from_session,
         prev_year=prev_year,
         prev_month=prev_month,
         next_year=next_year,
@@ -503,15 +577,22 @@ def index():
                 flash("⚠ 作業日はYYYY-MM-DDの形式で入力してください！", "error")
                 error_occurred = True
 
-        if workcd and not selected_option and not error_occurred: # WorkCD入力時のみWorkName選択を必須とする場合
-            flash("⚠ WorkCDに対応するWorkNameの選択が必要です！", "error")
+        # --- index() の POST 部分より抜粋 ---
+        selected_option = request.form.get("workname", "").strip()
+
+        if not selected_option and workcd:  
+            flash("⚠ WorkNameの選択が必要です！", "error")
             error_occurred = True
-        elif selected_option: # WorkNameが選択されている場合
-            try:
-                workname, bookname = selected_option.split("||")
-            except ValueError:
-                flash("⚠ WorkNameの選択値に不正な形式が含まれています。", "error")
-                error_occurred = True
+
+        elif selected_option:
+            # “||” があれば split、無ければ booknameInput の値を使う
+            if "||" in selected_option:
+                workname, bookname = selected_option.split("||", 1)
+            else:
+                workname = selected_option
+                # hidden フィールドから取得
+                bookname = request.form.get("bookname", "").strip()
+
         
         if error_occurred:
             return render_template("index.html",
@@ -573,8 +654,14 @@ def index():
                            personid_list=personid_list_data,
                            personid_dict=personid_dict_data,
                            selected_personid=selected_personid_session, 
-                           workday=workday_default)
-
+                           workday=workday_default,
+                    # ↓ 以下を追加 ↓
+                           workcd="",                          # WorkCD
+                            workoutput="",                      # 数量
+                            workprocess="",                     # WorkProcess
+                            selected_workname_option="",        # 「WorkName||BookName」のセレクト値
+                            unitprice=""                       # UnitPrice（JSで表示している場合は空文字）
+    )
 
 if __name__ == "__main__":
     from waitress import serve
