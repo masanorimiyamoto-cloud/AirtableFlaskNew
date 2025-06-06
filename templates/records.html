@@ -3,216 +3,184 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ personid_dict.get(personid|int, personid + "番") }} さんの {{ display_month }} の一覧</title>
+    <title>{{ personid_dict.get(personid|int, {'name': '不明なユーザー'})['name'] }} さんの {{ display_month }} の一覧</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
     <style>
-  /* 基本レイアウト */
-  body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
-    text-align: center;
-    padding: 10px;
-    margin: 0;
-  }
+        /* 基本レイアウト */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            padding: 10px;
+            margin: 0;
+        }
 
-  .container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    padding: 10px;
-    box-sizing: border-box;
-    max-width: 100%;
-    margin: auto;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    text-align: left;
-    overflow: hidden;    /* コンテナ外へのあふれを隠す */
-  }
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* 画面の高さいっぱいに広げる */
+            padding: 10px;
+            box-sizing: border-box;
+            max-width: 100%;
+            margin: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: left;
+            overflow: hidden;    /* コンテナ外へのあふれを隠す */
+        }
 
-  /* タイトル固定 */
-  h2 {
-    position: sticky;
-    top: 0;
-    background: white;
-    z-index: 3;
-    padding: 10px 0;
-    margin: 0;
-  }
+        /* --- ★★★ ここから変更 ★★★ --- */
+        /* ナビゲーションエリア全体 */
+        .page-header {
+            padding: 5px 0 15px 0; /* 上下の余白 */
+            border-bottom: 1px solid #eee;
+        }
 
-  /* ナビゲーションコントロール */
-  .navigation-controls {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    flex-wrap: wrap;
-  }
-  .nav-button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 5px;
-    text-decoration: none;
-    cursor: pointer;
-    font-size: 16px;
-    margin: 5px;
-    white-space: nowrap;
-  }
-  .nav-button:hover {
-    background-color: #0056b3;
-  }
-  .month-display {
-    font-size: 1.2em;
-    font-weight: bold;
-    margin: 5px 10px;
-    white-space: nowrap;
-    flex-grow: 1;
-    text-align: center;
-  }
+        /* 月移動ナビゲーション */
+        .month-navigation {
+            display: flex;
+            justify-content: space-between; /* 両端に寄せる */
+            align-items: center;
+            margin-bottom: 15px; /* 下のボタンとの余白 */
+        }
+        .month-display {
+            margin: 0;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+            white-space: nowrap; /* 月表示が改行されないように */
+        }
+        .nav-arrow {
+            font-family: 'Courier New', Courier, monospace; /* 矢印の見た目を調整 */
+            font-size: 2.5em;
+            font-weight: bold;
+            text-decoration: none;
+            color: #007bff;
+            padding: 0 15px;
+            line-height: 1; /* 高さを調整 */
+        }
+        .nav-arrow:hover {
+            color: #0056b3;
+        }
 
-  /* アクションボタン */
-  .action-buttons-container {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 15px;
-    flex-wrap: wrap;
-  }
-  .action-button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-    margin: 5px;
-  }
-  .action-button:hover {
-    background-color: #0056b3;
-  }
+        /* アクションボタン（入力画面へ戻るなど） */
+        .action-buttons-container {
+            display: flex;
+            justify-content: center; /* 中央揃え */
+        }
+        .action-button {
+            background-color: #28a745; /* 色を少し変えるなど */
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none; /* aタグの場合も考慮 */
+            margin: 0 5px;
+        }
+        .action-button:hover {
+            background-color: #218838;
+        }
+        /* --- ★★★ ここまで変更 ★★★ --- */
 
-  /* テーブル部分だけスクロール */
-  .table-container {
-    flex: 1 1 auto;      /* 残りスペースを占有 */
-    overflow-y: auto;    /* 縦スクロール */
-    overflow-x: auto;    /* 横スクロール */
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 0;       /* sticky との兼ね合いで余白をなくす */
-  }
-  th, td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: center;
-    font-size: 16px;
-  }
-  .table-container table thead th {
-    position: sticky;
-    top: 0;
-    background-color: #007bff;
-    color: white;
-    z-index: 2;
-  }
 
-  /* アイコンボタン */
-  .icon-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 20px;
-    margin: 0 5px;
-    padding: 5px;
-    vertical-align: middle;
-  }
-  .icon-button:hover {
-    opacity: 0.7;
-  }
+        /* テーブル部分だけスクロール */
+        .table-container {
+            flex: 1 1 auto;      /* 残りスペースを占有 */
+            overflow-y: auto;    /* 縦スクロール */
+            overflow-x: auto;    /* 横スクロール */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+            font-size: 16px;
+        }
+        .table-container table thead th {
+            position: sticky;
+            top: 0;
+            background-color: #007bff;
+            color: white;
+            z-index: 2;
+        }
 
-  /* Flash メッセージ */
-  .flash-message-item {
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 5px;
-    text-align: center;
-    border: 1px solid transparent;
-  }
-  .flash-message-item.success {
-    background-color: #d4edda;
-    color: #155724;
-    border-color: #c3e6cb;
-  }
-  .flash-message-item.error {
-    background-color: #f8d7da;
-    color: #721c24;
-    border-color: #f5c6cb;
-  }
-  .flash-message-item.info {
-    background-color: #cce5ff;
-    color: #004085;
-    border-color: #b8daff;
-  }
-  .flash-message-item.warning {
-    background-color: #fff3cd;
-    color: #856404;
-    border-color: #ffeeba;
-  }
+        /* アイコンボタン */
+        .icon-button {
+            background: none; border: none; cursor: pointer; font-size: 20px;
+            margin: 0 5px; padding: 5px; vertical-align: middle;
+        }
+        .icon-button:hover { opacity: 0.7; }
 
-  /* スマホ向け調整 */
-  @media (max-width: 768px) {
-    th, td {
-      padding: 6px;
-      font-size: 14px;
-    }
-    .icon-button {
-      font-size: 18px;
-    }
-    .nav-button, .action-button {
-      font-size: 14px;
-      padding: 7px 10px;
-    }
-    .month-display {
-      font-size: 1.1em;
-      margin: 5px;
-    }
-    .navigation-controls {
-      justify-content: center;
-    }
-  }
-  @media (max-width: 480px) {
-    .navigation-controls {
-      flex-direction: column;
-      align-items: center;
-    }
-    .navigation-controls > * {
-      margin-bottom: 8px;
-    }
-    .month-display {
-      order: -1;
-      margin-bottom: 8px;
-    }
-    .nav-button {
-      width: 80%;
-      text-align: center;
-    }
-  }
+        /* Flash メッセージ */
+        .flash-message-item {
+            padding: 10px; margin-bottom: 10px; border-radius: 5px;
+            text-align: center; border: 1px solid transparent;
+        }
+        .flash-message-item.success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+        .flash-message-item.error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+        .flash-message-item.info { background-color: #d1ecf1; color: #0c5460; border-color: #bee5eb; }
+        .flash-message-item.warning { background-color: #fff3cd; color: #856404; border-color: #ffeeba; }
 
-  /* 新規・編集ハイライト */
-  .highlight {
-    background-color: #fffaac !important;
-    transition: background-color 2s ease-out;
-  }
-</style>
+        /* スマホ向け調整 */
+        @media (max-width: 768px) {
+            th, td { padding: 6px; font-size: 14px; }
+            .icon-button { font-size: 18px; }
+            .action-button { font-size: 14px; padding: 7px 10px; }
+        }
+
+        /* --- ★★★ スマホ向けナビゲーション調整 ★★★ --- */
+        @media (max-width: 480px) {
+            .month-navigation {
+                /* 縦積みにはせず、少し詰めて表示 */
+                margin-bottom: 10px;
+            }
+            .month-display {
+                font-size: 1.2em;
+                padding: 0 5px; /* 左右の余白を少し詰める */
+            }
+            .nav-arrow {
+                font-size: 2em; /* 矢印を少し小さく */
+                padding: 0 10px;
+            }
+        }
+
+        /* 新規・編集ハイライト */
+        .highlight {
+            background-color: #fffaac !important;
+            transition: background-color 2s ease-out;
+        }
+    </style>
 
 </head>
 <body>
 
     <div class="container">
-        <h2>{{ personid_dict.get(personid|int, personid + " 番") }} さんの記録</h2>
+        <div class="page-header">
+            <div style="text-align:center; font-weight: bold; font-size: 1.1em; margin-bottom: 10px;">
+                {{ personid_dict[personid|int]['name'] }} さんの記録
+            </div>
 
+            <div class="month-navigation">
+                <a href="{{ url_for('ui_bp.records', year=prev_year, month=prev_month) }}" class="nav-arrow" title="前月へ">&lt;</a>
+                <h2 class="month-display">{{ display_month }}</h2>
+                <a href="{{ url_for('ui_bp.records', year=next_year, month=next_month) }}" class="nav-arrow" title="次月へ">&gt;</a>
+            </div>
+            
+            <div class="action-buttons-container">
+                <button
+                    onclick='location.href="{{ url_for("ui_bp.index") }}"'
+                    class="action-button">
+                    入力画面に戻る
+                </button>
+            </div>
+        </div>
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             <div id="flash-messages-container" style="margin-bottom:15px;">
@@ -223,33 +191,18 @@
           {% endif %}
         {% endwith %}
 
-        <div class="navigation-controls">
-            <a href="{{ url_for('records', year=prev_year, month=prev_month, personid=personid) }}" class="nav-button">＜ 前月</a>
-            <span class="month-display">{{ display_month }}</span>
-            <a href="{{ url_for('records', year=next_year, month=next_month, personid=personid) }}" class="nav-button">次月 ＞</a>
-        </div>
-        
-        <div class="action-buttons-container">
-            <button
-                onclick='location.href="{{ url_for("index", personid=personid) }}"'
-                class="action-button">
-                入力画面に戻る
-            </button>
-        </div>
 
         <div class="table-container">
             <table>
                 <thead>
-                    <tr>
-                        <th>WorkDay</th>
-                        <th>WorkCD</th>
-                        <th>WorkName</th>
-                        <th>WorkProcess</th>
-                        <th>UnitPrice</th>
-                        <th>WorkOutput</th>
-                        <th>小計</th>
-                        <th>操作</th>
-                    </tr>
+                    <th>作業日</th>
+                    <th>品番コード</th>
+                    <th>品名</th>
+                    <th>工程名</th>
+                    <th>単価</th>
+                    <th>数量</th>
+                    <th>金額</th>
+                    <th>操作</th>
                 </thead>
                 <tbody>
                     {% if records %}
@@ -263,9 +216,8 @@
                                 <td>{{ record.WorkOutput }}</td>
                                 <td>{{ "{:,.0f}".format(record.subtotal) }}</td>
                                 <td>
-                                    <a href="{{ url_for('edit_record', record_id=record.id, year=current_year, month=current_month) }}" class="icon-button" title="編集">✏️</a>
-                                    <form method="POST" action="{{ url_for('delete_record', record_id=record.id) }}" style="display:inline;">
-                                        <!-- 今見ている年・月を渡す -->
+                                    <a href="{{ url_for('ui_bp.edit_record', record_id=record.id, year=current_year, month=current_month) }}" class="icon-button" title="編集">✏️</a>
+                                    <form method="POST" action="{{ url_for('ui_bp.delete_record', record_id=record.id) }}" style="display:inline;">
                                         <input type="hidden" name="year"  value="{{ current_year }}">
                                         <input type="hidden" name="month" value="{{ current_month }}">
                                         <button type="submit" class="icon-button" title="削除" onclick="return confirm('本当に削除しますか？');">🗑️</button>
@@ -303,26 +255,19 @@
         <br>
     </div>
     <script>
- 
     document.addEventListener('DOMContentLoaded', function() {
-      // Jinja: new_record_id／edited_record_id が None のときは空文字列になる
-      const newId  = "{{ new_record_id or '' }}".trim();
+      const newId   = "{{ new_record_id or '' }}".trim();
       const editId = "{{ edited_record_id or '' }}".trim();
       const targetId = editId || newId;
 
-      if (!targetId) return;  // どちらも無ければ即終了
+      if (!targetId) return;
 
-      // CSS.escape で ID 中の特殊文字にも対応
       const selector = `#record-${CSS.escape(targetId)}`;
-      const row      = document.querySelector(selector);
+      const row       = document.querySelector(selector);
       const container = document.querySelector('.table-container');
 
       if (row && container) {
-        // 1) scrollIntoView でうまくいかない場合の保険
-        //row.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-
-        // 2) 明示的にコンテナをスクロール
-        const topOffset = row.offsetTop - container.clientHeight / 2;
+        const topOffset = row.offsetTop - (container.clientHeight / 2) + (row.clientHeight / 2);
         container.scrollTo({
           top: topOffset,
           behavior: 'smooth'
