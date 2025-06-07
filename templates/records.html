@@ -18,7 +18,7 @@
         .container {
             display: flex;
             flex-direction: column;
-            height: 100vh; /* 画面の高さいっぱいに広げる */
+            height: 100vh;
             padding: 10px;
             box-sizing: border-box;
             max-width: 100%;
@@ -27,38 +27,39 @@
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             text-align: left;
-            overflow: hidden;    /* コンテナ外へのあふれを隠す */
+            overflow: hidden;
         }
-
-        /* --- ★★★ ここから変更 ★★★ --- */
-        /* ナビゲーションエリア全体 */
+        
+        /* ナビゲーションとタイトルのヘッダーエリア */
         .page-header {
-            padding: 5px 0 15px 0; /* 上下の余白 */
+            padding: 5px 0 15px 0;
             border-bottom: 1px solid #eee;
+            /* テーブルヘッダーが固定されることを考慮し、この部分はスクロールしない */
+            flex-shrink: 0; 
         }
 
         /* 月移動ナビゲーション */
         .month-navigation {
             display: flex;
-            justify-content: space-between; /* 両端に寄せる */
+            justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px; /* 下のボタンとの余白 */
+            margin-bottom: 15px;
         }
         .month-display {
             margin: 0;
             font-size: 1.5em;
             font-weight: bold;
             color: #333;
-            white-space: nowrap; /* 月表示が改行されないように */
+            white-space: nowrap;
         }
         .nav-arrow {
-            font-family: 'Courier New', Courier, monospace; /* 矢印の見た目を調整 */
+            font-family: 'Courier New', Courier, monospace;
             font-size: 2.5em;
             font-weight: bold;
             text-decoration: none;
             color: #007bff;
             padding: 0 15px;
-            line-height: 1; /* 高さを調整 */
+            line-height: 1;
         }
         .nav-arrow:hover {
             color: #0056b3;
@@ -67,36 +68,49 @@
         /* アクションボタン（入力画面へ戻るなど） */
         .action-buttons-container {
             display: flex;
-            justify-content: center; /* 中央揃え */
+            justify-content: center;
         }
         .action-button {
-            background-color: #28a745; /* 色を少し変えるなど */
+            background-color: #28a745;
             color: white;
             border: none;
             padding: 8px 16px;
             border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
-            text-decoration: none; /* aタグの場合も考慮 */
+            text-decoration: none;
             margin: 0 5px;
         }
         .action-button:hover {
             background-color: #218838;
         }
-        /* --- ★★★ ここまで変更 ★★★ --- */
-
-        /* records.html の <style> タグ内に追加 */
-
+        
+        /* Flash メッセージ */
+        #flash-messages-container {
+            margin-bottom: 15px;
+        }
+        .flash-message-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            text-align: center;
+            border: 1px solid transparent;
+        }
         /* フェードアウト効果のためのCSS */
         #flash-messages-container.fade-out {
             opacity: 0;
-            transition: opacity 0.5s ease-out; /* 0.5秒かけて透明になる */
+            transition: opacity 0.5s ease-out;
         }
+        .flash-message-item.success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+        .flash-message-item.error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+        .flash-message-item.info { background-color: #d1ecf1; color: #0c5460; border-color: #bee5eb; }
+        .flash-message-item.warning { background-color: #fff3cd; color: #856404; border-color: #ffeeba; }
+
         /* テーブル部分だけスクロール */
         .table-container {
-            flex: 1 1 auto;      /* 残りスペースを占有 */
-            overflow-y: auto;    /* 縦スクロール */
-            overflow-x: auto;    /* 横スクロール */
+            flex: 1 1 auto;
+            overflow-y: auto;
+            overflow-x: auto;
         }
         table {
             width: 100%;
@@ -124,35 +138,19 @@
         }
         .icon-button:hover { opacity: 0.7; }
 
-        /* Flash メッセージ */
-        .flash-message-item {
-            padding: 10px; margin-bottom: 10px; border-radius: 5px;
-            text-align: center; border: 1px solid transparent;
-        }
-        .flash-message-item.success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
-        .flash-message-item.error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
-        .flash-message-item.info { background-color: #d1ecf1; color: #0c5460; border-color: #bee5eb; }
-        .flash-message-item.warning { background-color: #fff3cd; color: #856404; border-color: #ffeeba; }
-
         /* スマホ向け調整 */
         @media (max-width: 768px) {
             th, td { padding: 6px; font-size: 14px; }
             .icon-button { font-size: 18px; }
             .action-button { font-size: 14px; padding: 7px 10px; }
         }
-
-        /* --- ★★★ スマホ向けナビゲーション調整 ★★★ --- */
         @media (max-width: 480px) {
-            .month-navigation {
-                /* 縦積みにはせず、少し詰めて表示 */
-                margin-bottom: 10px;
-            }
             .month-display {
                 font-size: 1.2em;
-                padding: 0 5px; /* 左右の余白を少し詰める */
+                padding: 0 5px;
             }
             .nav-arrow {
-                font-size: 2em; /* 矢印を少し小さく */
+                font-size: 2em;
                 padding: 0 10px;
             }
         }
@@ -163,10 +161,8 @@
             transition: background-color 2s ease-out;
         }
     </style>
-
 </head>
 <body>
-
     <div class="container">
         <div class="page-header">
             <div style="text-align:center; font-weight: bold; font-size: 1.1em; margin-bottom: 10px;">
@@ -187,9 +183,10 @@
                 </button>
             </div>
         </div>
+
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
-            <div id="flash-messages-container" style="margin-bottom:15px;">
+            <div id="flash-messages-container">
             {% for category, message in messages %}
               <p class="flash-message-item {{ category }}">{{ message }}</p>
             {% endfor %}
@@ -197,18 +194,19 @@
           {% endif %}
         {% endwith %}
 
-
         <div class="table-container">
             <table>
                 <thead>
-                    <th>作業日</th>
-                    <th>品番コード</th>
-                    <th>品名</th>
-                    <th>工程名</th>
-                    <th>単価</th>
-                    <th>数量</th>
-                    <th>金額</th>
-                    <th>操作</th>
+                    <tr>
+                        <th>作業日</th>
+                        <th>品番コード</th>
+                        <th>品名</th>
+                        <th>工程名</th>
+                        <th>単価</th>
+                        <th>数量</th>
+                        <th>金額</th>
+                        <th>操作</th>
+                    </tr>
                 </thead>
                 <tbody>
                     {% if records %}
@@ -260,50 +258,41 @@
         </div>
         <br>
     </div>
-    <script>
+<script>
     document.addEventListener('DOMContentLoaded', function() {
-      
-      // DOMが読み込まれたら実行
-document.addEventListener('DOMContentLoaded', function() {
-
-    // --- ★★★ ここから追加 ★★★ ---
-    // フラッシュメッセージを自動で消す処理
-    const flashContainer = document.getElementById('flash-messages-container');
-
-    if (flashContainer) {
-            // ページ表示から3秒後 (3000ミリ秒) に処理を開始
+        // フラッシュメッセージを自動で消す処理
+        const flashContainer = document.getElementById('flash-messages-container');
+        if (flashContainer) {
             setTimeout(() => {
-                // fade-outクラスを追加して、フェードアウトのアニメーションを開始
                 flashContainer.classList.add('fade-out');
-
-                // フェードアウトのアニメーションが終わるのを待ってから（0.5秒後）、要素を完全に非表示にする
                 setTimeout(() => {
                     flashContainer.style.display = 'none';
-                }, 500); // CSSの transition 時間と合わせる
-
-            }, 3000);
+                }, 500); // CSSのtransition時間と合わせる
+            }, 3000); // 3秒後に消え始める
         }
-        // --- ★★★ ここまで追加 ★★★ ---
-      const newId   = "{{ new_record_id or '' }}".trim();
-      const editId = "{{ edited_record_id or '' }}".trim();
-      const targetId = editId || newId;
+        
+        // 新規・編集レコードへのハイライトとスクロール処理
+        const newId   = "{{ new_record_id or '' }}".trim();
+        const editId = "{{ edited_record_id or '' }}".trim();
+        const targetId = editId || newId;
 
-      if (!targetId) return;
+        if (targetId) { // targetIdがある場合のみ実行
+            const selector = `#record-${CSS.escape(targetId)}`;
+            const row       = document.querySelector(selector);
+            const container = document.querySelector('.table-container');
 
-      const selector = `#record-${CSS.escape(targetId)}`;
-      const row       = document.querySelector(selector);
-      const container = document.querySelector('.table-container');
-
-      if (row && container) {
-        const topOffset = row.offsetTop - (container.clientHeight / 2) + (row.clientHeight / 2);
-        container.scrollTo({
-          top: topOffset,
-          behavior: 'smooth'
-        });
-      } else {
-        console.warn('⚠️ highlight row or container not found:', selector, container);
-      }
+            if (row && container) {
+                // スクロール位置を計算して中央に表示
+                const topOffset = row.offsetTop - (container.clientHeight / 2) + (row.clientHeight / 2);
+                container.scrollTo({
+                  top: topOffset,
+                  behavior: 'smooth'
+                });
+            } else {
+                console.warn('⚠️ highlight row or container not found:', selector, container);
+            }
+        }
     });
-    </script>
+</script>
 </body>
 </html>
