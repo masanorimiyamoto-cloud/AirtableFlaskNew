@@ -85,7 +85,13 @@
         }
         /* --- ★★★ ここまで変更 ★★★ --- */
 
+        /* records.html の <style> タグ内に追加 */
 
+        /* フェードアウト効果のためのCSS */
+        #flash-messages-container.fade-out {
+            opacity: 0;
+            transition: opacity 0.5s ease-out; /* 0.5秒かけて透明になる */
+        }
         /* テーブル部分だけスクロール */
         .table-container {
             flex: 1 1 auto;      /* 残りスペースを占有 */
@@ -256,6 +262,28 @@
     </div>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+      
+      // DOMが読み込まれたら実行
+document.addEventListener('DOMContentLoaded', function() {
+
+    // --- ★★★ ここから追加 ★★★ ---
+    // フラッシュメッセージを自動で消す処理
+    const flashContainer = document.getElementById('flash-messages-container');
+
+    if (flashContainer) {
+            // ページ表示から3秒後 (3000ミリ秒) に処理を開始
+            setTimeout(() => {
+                // fade-outクラスを追加して、フェードアウトのアニメーションを開始
+                flashContainer.classList.add('fade-out');
+
+                // フェードアウトのアニメーションが終わるのを待ってから（0.5秒後）、要素を完全に非表示にする
+                setTimeout(() => {
+                    flashContainer.style.display = 'none';
+                }, 500); // CSSの transition 時間と合わせる
+
+            }, 3000);
+        }
+        // --- ★★★ ここまで追加 ★★★ ---
       const newId   = "{{ new_record_id or '' }}".trim();
       const editId = "{{ edited_record_id or '' }}".trim();
       const targetId = editId || newId;
