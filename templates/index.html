@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>データ入力 - BookSKY_NET (先進テスト0607)</title>
+    <title>データ入力 - BookSKY_NET (ログイン版0612)</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <style>
         body {
@@ -98,7 +98,7 @@
     <div class="container">
         <div class="header">
             <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="BookSKY Logo" class="logo">
-            <h2>BookSKY_NET (ログイン版先進0607)</h2>
+            <h2>BookSKY_NET (ログイン版2025.6.12)</h2>
         </div>
 
         {% if session.logged_in_personid %}
@@ -246,13 +246,20 @@
                 worknameSelect.addEventListener('click', expandWorknameOptions);
 
                 worknameSelect.addEventListener('change', () => {
-                    const selectedOption = worknameSelect.options[worknameSelect.selectedIndex];
-                    if (selectedOption && selectedOption.value) { 
-                        if(booknameInput) booknameInput.value = selectedOption.dataset.bookname || ""; 
-                    } else {
-                        if(booknameInput) booknameInput.value = ""; 
+                const selectedOption = worknameSelect.options[worknameSelect.selectedIndex];
+                if (selectedOption && selectedOption.value) {
+                    // ★★★ ここからが修正箇所です ★★★
+                    // 品番コード(workcd)の入力欄を、選択された品名の完全なコードで更新します。
+                    if (workcdInput && selectedOption.dataset.code) {
+                        workcdInput.value = selectedOption.dataset.code;
                     }
-                });
+                    // ★★★ 修正はここまでです ★★★
+                    
+                    if(booknameInput) booknameInput.value = selectedOption.dataset.bookname || ""; 
+                } else {
+                    if(booknameInput) booknameInput.value = ""; 
+                }
+            });
             }
 
             const fetchAndFill = debounce(() => {
