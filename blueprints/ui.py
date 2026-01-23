@@ -176,7 +176,11 @@ def records(year=None, month=None):
     session['current_display_month'] = month
     display_month_str = f"{year}年{month}月"
     
-    records_data = get_airtable_records_for_month(person_id_to_use, year, month) 
+   
+    force_refresh = (request.args.get("refresh") == "1")
+    records_data = get_airtable_records_for_month(person_id_to_use, year, month, force_refresh=force_refresh)
+
+    
     if records_data is None: records_data = []
 
     total_amount = 0

@@ -136,19 +136,22 @@ def create_airtable_record(person_id: str, workcord: str, workname: str, booknam
 
 
 
-def get_airtable_records_for_month(person_id: str, target_year: int, target_month: int):
-    """指定されたPersonIDと年月のレコードをAirtableから取得（キャッシュ対応）。"""
-    # ✅ まずキャッシュを見る
-    try:
-        from airtable_cache import cache_get, cache_set, month_key
-        CACHE_TTL_SEC = 300  # まず5分。必要なら60〜600で調整
-        key = month_key(person_id, target_year, target_month)
-        cached = cache_get(key)
-        if cached is not None:
-            logger.info(f"[CACHE HIT] month records: {key}")
-            return cached
-    except Exception as e:
-        logger.warning(f"キャッシュ参照に失敗（無視して継続）: {e}")
+def get_airtable_records_for_month(person_id: str, target_year: int, target_month: int, force_refresh: bool = False):
+    """指定されたPersonIDと年月のレコードをAirtableから取得（短TTLキャッシュ + 強制更新対応）。"""
+
+    # ✅ まずキャッシュ（強制更新でなければ）
+    key = None
+    CACHE_TTL_SEC = 10  # ← まず10秒推奨（運用により 5〜30秒で調整）
+    if not force_refresh:
+        try:
+            from airtable_cache import cache_get, cache_set, month_key
+            key = month_key(person_id, target_year, target_month)
+            cached = cache_get(key)
+            if cached is not None:
+                logger.info(f"[CACHE HIT] {key}")
+                return cached
+        except Exception as e:
+            logger.warning(f"キャッシュ参照失敗（無視）: {e}")
 
     url = _build_airtable_url(person_id)
     if not url:
@@ -156,7 +159,6 @@ def get_airtable_records_for_month(person_id: str, target_year: int, target_mont
 
     params = {
         "filterByFormula": f"AND(YEAR({{WorkDay}})={target_year}, MONTH({{WorkDay}})={target_month})",
-        # ✅ 返すフィールドを絞ってレスポンス軽量化（API回数は同じでも体感が良くなる）
         "fields[]": ["WorkDay","WorkCord","WorkName","WorkProcess","UnitPrice","WorkOutput","BookName"],
         "sort[0][field]": "WorkDay",
         "sort[0][direction]": "asc",
@@ -164,11 +166,9 @@ def get_airtable_records_for_month(person_id: str, target_year: int, target_mont
     }
 
     try:
-        logger.info(f"Airtableからのレコード取得開始: URL={url}, Params={params}, PersonID={person_id}")
         response = requests.get(url, headers=HEADERS, params=params, timeout=15)
         response.raise_for_status()
         records_data = response.json().get("records", [])
-        logger.info(f"Airtableから {len(records_data)} 件のレコードを取得 (PersonID: {person_id}, {target_year}-{target_month})")
 
         processed_records = []
         for record in records_data:
@@ -183,18 +183,21 @@ def get_airtable_records_for_month(person_id: str, target_year: int, target_mont
                 "WorkOutput": fields.get("WorkOutput", "0"),
             })
 
-        # ✅ キャッシュ保存
+        # ✅ キャッシュ保存（短TTL）
         try:
             from airtable_cache import cache_set, month_key
-            cache_set(month_key(person_id, target_year, target_month), processed_records, CACHE_TTL_SEC)
+            key = month_key(person_id, target_year, target_month)
+            cache_set(key, processed_records, CACHE_TTL_SEC)
+            logger.info(f"[CACHE SET] {key} ttl={CACHE_TTL_SEC}s")
         except Exception as e:
-            logger.warning(f"キャッシュ保存に失敗（無視して継続）: {e}")
+            logger.warning(f"キャッシュ保存失敗（無視）: {e}")
 
         return processed_records
 
     except Exception as e:
         logger.error(f"Airtableレコード取得エラー: {e}", exc_info=True)
         return []
+
 
 
 
