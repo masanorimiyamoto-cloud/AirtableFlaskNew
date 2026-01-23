@@ -234,13 +234,11 @@ def records(year=None, month=None):
     )
 
 @ui_bp.route("/delete_record/<record_id>", methods=["POST"])
-@login_required # ★★★ 保護 ★★★
+@login_required
 def delete_record(record_id):
-    logged_in_pid = str(session.get("logged_in_personid")) # 文字列に統一
+    logged_in_pid = str(session.get("logged_in_personid"))
 
-    # ここで、削除しようとしているレコードが本当にこの logged_in_pid のものか、
-    # Airtable側で確認する手段があればより安全ですが、今回はPersonIDをサービス関数に渡します。
-    success, message = delete_airtable_record(logged_in_pid, record_id) 
+    success, message = delete_airtable_record(logged_in_pid, record_id)
     flash(message, "success" if success else "error")
 
     try:
@@ -249,8 +247,19 @@ def delete_record(record_id):
     except (TypeError, ValueError):
         year  = session.get("current_display_year", date.today().year)
         month = session.get("current_display_month", date.today().month)
-    
+
+    # ✅ キャッシュの当月から record_id を消す（あれば）
+    if success:
+        try:
+            from airtable_cache import month_cache_remove_record
+            ok = month_cache_remove_record(logged_in_pid, year, month, record_id)
+            if ok:
+                current_app.logger.info(f"[CACHE] removed record {record_id} from {year}-{month:02d}")
+        except Exception as e:
+            current_app.logger.warning(f"delete cache update skipped: {e}")
+
     return redirect(url_for(".records", year=year, month=month))
+
 
 @ui_bp.route("/edit_record/<record_id>", methods=["GET", "POST"])
 @login_required # ★★★ 保護 ★★★
@@ -280,16 +289,33 @@ def edit_record(record_id):
         success, message = update_airtable_record_fields(logged_in_pid, record_id, updated_fields)
         # ... (flashメッセージ、リダイレクト処理) ...
         if success:
-            # ... (差分作成、flash) ...
             session['edited_record_id'] = record_id
-        else:
-            flash(message, "error")
-        
-        try:
-            dt = datetime.strptime(new_day, "%Y-%m-%d")
-            return redirect(url_for(".records", year=dt.year, month=dt.month))
-        except ValueError:
-            return redirect(url_for(".records", year=original_year, month=original_month))
+
+            # ✅ キャッシュ反映（Airtable追加GETなし）
+            try:
+                from airtable_cache import month_cache_update_record, month_cache_move_record
+                new_dt = datetime.strptime(new_day, "%Y-%m-%d")
+                new_y, new_m = new_dt.year, new_dt.month
+
+                # records表示で使うキー名に合わせる（あなたの processed_records は WorkDay/WorkOutput 等）
+                patch_fields = {"WorkDay": new_day, "WorkOutput": new_output_val}
+
+                if (new_y == original_year) and (new_m == original_month):
+                    ok = month_cache_update_record(logged_in_pid, original_year, original_month, record_id, patch_fields)
+                else:
+                    ok = month_cache_move_record(
+                        logged_in_pid,
+                        original_year, original_month,
+                        new_y, new_m,
+                        record_id,
+                        patch_fields
+                    )
+
+                if ok:
+                    current_app.logger.info(f"[CACHE] updated/moved record {record_id}")
+            except Exception as e:
+                current_app.logger.warning(f"edit cache update skipped: {e}")
+
 
 
     # GET リクエスト時
