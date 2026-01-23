@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>データ入力 - BookSKY_NET (ログイン版0612)</title>
+    <title>先進_BookSKY_NET (ログイン版2025.12.1)</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <style>
         body {
@@ -98,7 +98,7 @@
     <div class="container">
         <div class="header">
             <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="BookSKY Logo" class="logo">
-            <h2>BookSKY_NET (ログイン版2025.6.12)</h2>
+            <h2>先進_BookSKY_NET (ログイン版2025.12.1)</h2>
         </div>
 
         {% if session.logged_in_personid %}
@@ -164,7 +164,12 @@
 
     <script>
         // Pythonから渡された単価辞書データをJavaScriptオブジェクトとして直接受け取る
-        const unitpriceDict = {{ unitprice_data_for_js|tojson|safe if unitprice_data_for_js else {} }};
+       // hidden 要素に埋め込んだ JSON 文字列を JS オブジェクトに変換
+const unitpriceDataElem = document.getElementById('unitprice-data');
+const unitpriceDict = unitpriceDataElem
+    ? JSON.parse(unitpriceDataElem.dataset.json || '{}')
+    : {};
+
 
         function debounce(fn, wait) {
             let timer = null;
