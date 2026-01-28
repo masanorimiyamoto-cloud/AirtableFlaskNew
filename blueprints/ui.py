@@ -300,4 +300,52 @@ def edit_record(record_id):
         flash(message, "success" if success else "error")
 
         if success:
-            # ✅ 更新後に必ず「更新先の月一覧」へ戻す（WorkDayを変えて
+            # ✅ 更新後に必ず「更新先の月一覧」へ戻す（WorkDayを変えて月跨ぎしてもOK）
+            new_dt = datetime.strptime(new_day, "%Y-%m-%d")
+            new_y, new_m = new_dt.year, new_dt.month
+
+            # ✅ キャッシュ反映（失敗しても一覧へは戻す）
+            try:
+                from airtable_cache import month_cache_update_record, month_cache_move_record
+                patch_fields = {"WorkDay": new_day, "WorkOutput": new_output_val}
+
+                if (new_y == original_year) and (new_m == original_month):
+                    month_cache_update_record(logged_in_pid, original_year, original_month, record_id, patch_fields)
+                else:
+                    month_cache_move_record(
+                        logged_in_pid,
+                        original_year, original_month,
+                        new_y, new_m,
+                        record_id,
+                        patch_fields
+                    )
+                current_app.logger.info(f"[CACHE] updated/moved record {record_id}")
+            except Exception as e:
+                current_app.logger.warning(f"edit cache update skipped: {e}")
+
+            session["edited_record_id"] = record_id
+            return redirect(url_for(".records", year=new_y, month=new_m))  # ← ★これが重要
+
+        # 更新失敗時：編集画面に留まる
+        record_data_for_render, _ = get_airtable_record_details(logged_in_pid, record_id)
+        return render_template(
+            "edit_record.html",
+            record=record_data_for_render,
+            record_id=record_id,
+            original_year=original_year,
+            original_month=original_month
+        )
+
+    # --- GET ---
+    record_data, error_message = get_airtable_record_details(logged_in_pid, record_id)
+    if error_message or record_data is None:
+        flash(error_message or "❌ レコード取得に失敗しました。", "error")
+        return redirect(url_for(".records", year=original_year, month=original_month))
+
+    return render_template(
+        "edit_record.html",
+        record=record_data,
+        record_id=record_id,
+        original_year=original_year,
+        original_month=original_month
+    )
