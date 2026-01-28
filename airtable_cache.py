@@ -5,7 +5,7 @@ from threading import Lock
 _lock = Lock()
 _cache = {}
 
-MONTH_CACHE_TTL_SEC = 30  # 例：30秒（10でも60でもOK）
+MONTH_CACHE_TTL_SEC = 60  # 例：30秒（10でも60でもOK）
 
 def month_key(person_id: str, year: int, month: int) -> str:
     return f"airtable:month:{person_id}:{year:04d}-{month:02d}"
