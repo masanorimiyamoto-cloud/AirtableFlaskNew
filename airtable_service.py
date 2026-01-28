@@ -3,7 +3,8 @@ import os
 import requests
 import logging
 
-from airtable_cache import cache_get, cache_set, cache_delete, month_key
+
+from airtable_cache import cache_get, cache_set, cache_delete, month_key, MONTH_CACHE_TTL_SEC
 
 
 MONTH_CACHE_TTL = 60  # まず60秒でOK（30〜300秒で調整）

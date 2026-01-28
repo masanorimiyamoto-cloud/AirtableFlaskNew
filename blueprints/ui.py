@@ -98,11 +98,11 @@ def index():
             str(logged_in_pid), workcd, workname, bookname, workoutput_val, workprocess, unitprice, workday
         )
 
-        flash(response_text, "success" if status_code == 200 and new_record_id else "error")
+        flash(response_text, "success" if status_code in (200, 201) and new_record_id else "error")
         session['selected_personid'] = str(logged_in_pid) 
         session['workday'] = workday
 
-        if status_code == 200 and new_record_id:
+        if status_code in (200, 201) and new_record_id:
             session['new_record_id'] = new_record_id
             try:
                 workday_dt = datetime.strptime(workday, "%Y-%m-%d")

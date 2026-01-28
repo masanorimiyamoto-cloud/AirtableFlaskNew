@@ -5,6 +5,8 @@ from threading import Lock
 _lock = Lock()
 _cache = {}
 
+MONTH_CACHE_TTL_SEC = 30  # 例：30秒（10でも60でもOK）
+
 def month_key(person_id: str, year: int, month: int) -> str:
     return f"airtable:month:{person_id}:{year:04d}-{month:02d}"
 
@@ -31,7 +33,10 @@ def cache_delete(key: str):
 
 # --- ここから追加：キャッシュの行操作（Airtable追加コールなし） ---
 
-def month_cache_remove_record(person_id: str, year: int, month: int, record_id: str, ttl_sec: int = 300) -> bool:
+def month_cache_remove_record(person_id: str, year: int, month: int, record_id: str,
+                              ttl_sec: int = MONTH_CACHE_TTL_SEC) -> bool:
+    ...
+
     """当月キャッシュが存在する場合、その中の record_id を1件削除して保存し直す。"""
     key = month_key(person_id, year, month)
     rows = cache_get(key)
@@ -45,7 +50,10 @@ def month_cache_remove_record(person_id: str, year: int, month: int, record_id: 
     cache_set(key, new_rows, ttl_sec)
     return True
 
-def month_cache_update_record(person_id: str, year: int, month: int, record_id: str, fields: dict, ttl_sec: int = 300) -> bool:
+def month_cache_update_record(person_id: str, year: int, month: int, record_id: str, fields: dict,
+                              ttl_sec: int = MONTH_CACHE_TTL_SEC) -> bool:
+    ...
+
     """
     当月キャッシュが存在する場合、その中の record_id を更新して保存し直す。
     fields例: {"WorkDay": "...", "WorkOutput": 123}
@@ -73,14 +81,8 @@ def month_cache_update_record(person_id: str, year: int, month: int, record_id: 
     cache_set(key, new_rows, ttl_sec)
     return True
 
-def month_cache_move_record(
-    person_id: str,
-    from_year: int, from_month: int,
-    to_year: int, to_month: int,
-    record_id: str,
-    fields: dict,
-    ttl_sec: int = 300
-) -> bool:
+def month_cache_move_record(person_id: str, from_year: int, from_month: int, to_year: int, to_month: int, record_id: str, fields: dict,
+                            ttl_sec: int = MONTH_CACHE_TTL_SEC) -> bool:
     """
     月跨ぎ編集用：
       - from月キャッシュがあれば record_id を取り出して削除
