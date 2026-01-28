@@ -266,73 +266,94 @@ def delete_record(record_id):
 
 
 @ui_bp.route("/edit_record/<record_id>", methods=["GET", "POST"])
-@login_required # ★★★ 保護 ★★★
+@login_required
 def edit_record(record_id):
     logged_in_pid = str(session.get("logged_in_personid"))
 
-    original_year = session.get('current_display_year', date.today().year)
-    original_month = session.get('current_display_month', date.today().month)
-    # ... (URLパラメータからの年月取得ロジックは変更なし) ...
-
-    if request.method == "POST":
-        # ... (フォームデータ取得) ...
-        new_day = request.form.get("WorkDay", "")
-        new_output_str = request.form.get("WorkOutput", "")
+    # ✅ GET時はURLパラメータ（?year=YYYY&month=MM）を優先、無ければセッション
+    if request.method == "GET":
         try:
-            new_output_val = int(new_output_str)
+            original_year = int(request.args.get("year") or session.get('current_display_year') or date.today().year)
+            original_month = int(request.args.get("month") or session.get('current_display_month') or date.today().month)
         except ValueError:
-            # ... (エラー処理、レコード再取得してフォーム表示) ...
-            flash("❌ 作業量は数値で入力してください。", "error")
-            record_data_for_render, error_get_msg = get_airtable_record_details(logged_in_pid, record_id)
-            # ... (エラー時のテンプレート再表示) ...
-            return render_template("edit_record.html", record=record_data_for_render, record_id=record_id, original_year=original_year, original_month=original_month)
+            original_year = session.get('current_display_year', date.today().year)
+            original_month = session.get('current_display_month', date.today().month)
 
+        record_data, error_message = get_airtable_record_details(logged_in_pid, record_id)
+        if error_message or record_data is None:
+            flash(error_message or "❌ レコード取得に失敗しました。", "error")
+            return redirect(url_for(".records", year=original_year, month=original_month))
 
-        updated_fields = { "WorkDay": new_day, "WorkOutput": new_output_val }
-        # ★★★ logged_in_pid を使用 ★★★
-        success, message = update_airtable_record_fields(logged_in_pid, record_id, updated_fields)
-        # ... (flashメッセージ、リダイレクト処理) ...
-        if success:
-            session['edited_record_id'] = record_id
+        return render_template(
+            "edit_record.html",
+            record=record_data,
+            record_id=record_id,
+            original_year=original_year,
+            original_month=original_month
+        )
 
-            # ✅ キャッシュ反映（Airtable追加GETなし）
-            try:
-                from airtable_cache import month_cache_update_record, month_cache_move_record
-                new_dt = datetime.strptime(new_day, "%Y-%m-%d")
-                new_y, new_m = new_dt.year, new_dt.month
+    # ✅ POST時は hidden から確実に受け取る（戻り先固定のため）
+    try:
+        original_year = int(request.form.get("original_year") or session.get('current_display_year') or date.today().year)
+        original_month = int(request.form.get("original_month") or session.get('current_display_month') or date.today().month)
+    except ValueError:
+        original_year = session.get('current_display_year', date.today().year)
+        original_month = session.get('current_display_month', date.today().month)
 
-                # records表示で使うキー名に合わせる（あなたの processed_records は WorkDay/WorkOutput 等）
-                patch_fields = {"WorkDay": new_day, "WorkOutput": new_output_val}
+    new_day = request.form.get("WorkDay", "")
+    new_output_str = request.form.get("WorkOutput", "")
 
-                if (new_y == original_year) and (new_m == original_month):
-                    ok = month_cache_update_record(logged_in_pid, original_year, original_month, record_id, patch_fields)
-                else:
-                    ok = month_cache_move_record(
-                        logged_in_pid,
-                        original_year, original_month,
-                        new_y, new_m,
-                        record_id,
-                        patch_fields
-                    )
+    try:
+        new_output_val = int(new_output_str)
+    except ValueError:
+        flash("❌ 作業量は数値で入力してください。", "error")
+        record_data_for_render, _ = get_airtable_record_details(logged_in_pid, record_id)
+        return render_template(
+            "edit_record.html",
+            record=record_data_for_render,
+            record_id=record_id,
+            original_year=original_year,
+            original_month=original_month
+        )
 
-                if ok:
-                    current_app.logger.info(f"[CACHE] updated/moved record {record_id}")
-            except Exception as e:
-                current_app.logger.warning(f"edit cache update skipped: {e}")
+    updated_fields = {"WorkDay": new_day, "WorkOutput": new_output_val}
+    success, message = update_airtable_record_fields(logged_in_pid, record_id, updated_fields)
+    flash(message, "success" if success else "error")
 
+    # ✅ 失敗したら編集画面に留まる（ただし return で終了）
+    if not success:
+        record_data_for_render, _ = get_airtable_record_details(logged_in_pid, record_id)
+        return render_template(
+            "edit_record.html",
+            record=record_data_for_render,
+            record_id=record_id,
+            original_year=original_year,
+            original_month=original_month
+        )
 
+    # ✅ 成功：ハイライト用
+    session['edited_record_id'] = record_id
 
-    # GET リクエスト時
-    # ★★★ logged_in_pid を使用 ★★★
-    record_data, error_message = get_airtable_record_details(logged_in_pid, record_id)
-    if error_message or record_data is None:
-        flash(error_message or "❌ レコード取得に失敗しました。", "error")
-        return redirect(url_for(".records", year=original_year, month=original_month))
+    # ✅ キャッシュ反映（Airtable追加GETなし）
+    try:
+        from airtable_cache import month_cache_update_record, month_cache_move_record
+        new_dt = datetime.strptime(new_day, "%Y-%m-%d")
+        new_y, new_m = new_dt.year, new_dt.month
+        patch_fields = {"WorkDay": new_day, "WorkOutput": new_output_val}
 
-    return render_template(
-        "edit_record.html",
-        record=record_data,
-        record_id=record_id,
-        original_year=original_year,
-        original_month=original_month
-    )
+        if (new_y == original_year) and (new_m == original_month):
+            month_cache_update_record(logged_in_pid, original_year, original_month, record_id, patch_fields)
+        else:
+            month_cache_move_record(
+                logged_in_pid,
+                original_year, original_month,
+                new_y, new_m,
+                record_id,
+                patch_fields
+            )
+    except Exception as e:
+        current_app.logger.warning(f"edit cache update skipped: {e}")
+
+    # ✅ ここが肝：必ず月一覧へ戻す（作業日が変わったら新しい月へ）
+    new_dt = datetime.strptime(new_day, "%Y-%m-%d")
+    return redirect(url_for(".records", year=new_dt.year, month=new_dt.month))
