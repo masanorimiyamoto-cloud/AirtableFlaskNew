@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BookSKY_NET (cache版2026.1)</title>
+    <title>BookSKY_NET (2026.627)</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <style>
         body {
@@ -40,6 +40,12 @@
             background-color: #e9ecef;
             cursor: not-allowed;
         }
+        select:disabled { /* 無効化された品名欄など：操作不可と分かる見た目に */
+            background-color: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
+            opacity: 1; /* iOS等での薄すぎ表示を防ぐ */
+        }
         button {
             background-color: #007bff;
             color: white;
@@ -47,9 +53,22 @@
             border: none;
             cursor: pointer;
             margin-top: 15px;
+            transition: background-color 0.1s ease, transform 0.05s ease, box-shadow 0.1s ease;
         }
         button:hover {
             background-color: #0056b3;
+        }
+        button:active {
+            background-color: #004085;
+            transform: scale(0.97);
+            box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.3);
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            opacity: 0.8;
         }
         #submitButton {
             margin-top: 30px;
@@ -98,7 +117,7 @@
     <div class="container">
         <div class="header">
             <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="BookSKY Logo" class="logo">
-            <h2>BookSKY_NET (2026.129cache)</h2>
+            <h2>BookSKY_NET (2026.627)</h2>
         </div>
 
         {% if session.logged_in_personid %}
@@ -114,10 +133,6 @@
                     {% for category, message in messages %}
                         <p class="{{ category }}">{{ message }}</p>
                     {% endfor %}
-                </div>
-            {% else %}
-                 <div id="flash-message" style="min-height: 2em;"> 
-                    <p style="color: gray;">新しいデータを入力してください</p>
                 </div>
             {% endif %}
         {% endwith %}
@@ -135,8 +150,8 @@
 
             <label for="worknameSelect">📚 品名:</label>
             <input type="hidden" id="booknameInput" name="bookname_hidden" value="{{ bookname_hidden or '' }}">
-            <select id="worknameSelect" name="workname" class="form-control">
-                 <option value="" selected disabled>品番コードを入力してください</option>
+            <select id="worknameSelect" name="workname" class="form-control" disabled>
+                 <option value="" selected disabled>⬆ 先に品番コード 3桁以上を入力</option>
             </select>
             
             <label for="workprocess">🛠 行程名:</label>
@@ -158,13 +173,14 @@
             
             <button type="submit" id="submitButton" class="btn btn-primary">送信</button>
         </form>
+        <div id="unitprice-data" data-json='{{ unitprice_data_for_js | tojson }}' style="display:none;"></div>
     </div>
 
     <button id="viewRecordsButton" style="margin-top:15px; font-size:18px;">入力一覧確認</button>
 
     <script>
         // Pythonから渡された単価辞書データをJavaScriptオブジェクトとして直接受け取る
-       // hidden 要素に埋め込んだ JSON 文字列を JS オブジェクトに変換
+        // hidden 要素に埋め込んだ JSON 文字列を JS オブジェクトに変換
 const unitpriceDataElem = document.getElementById('unitprice-data');
 const unitpriceDict = unitpriceDataElem
     ? JSON.parse(unitpriceDataElem.dataset.json || '{}')
@@ -199,28 +215,30 @@ const unitpriceDict = unitpriceDataElem
             if (workcdInput && worknameSelect) {
                 if (!workcdInput.value || workcdInput.value.length < 3 ) { 
                     worknameSelect.style.display = 'none'; 
-                    populateWorknameSelectWithMessage('品番コードを3桁以上入力...');
+                    populateWorknameSelectWithMessage('⬆ 先に品番コード 3桁以上を入力', false, true);
                 } else { 
                     populateWorknameSelectWithMessage('品番コード再入力または品名を選択...');
                     worknameSelect.style.display = 'block';
                 }
             } else if (worknameSelect) { 
                  worknameSelect.style.display = 'none'; 
-                 populateWorknameSelectWithMessage('品番コードを3桁以上入力...');
+                 populateWorknameSelectWithMessage('⬆ 先に品番コード 3桁以上を入力', false, true);
             }
 
-            function populateWorknameSelectWithMessage(message, isError = false) {
+            function populateWorknameSelectWithMessage(message, isError = false, disabledState = false) {
                 if (!worknameSelect) return;
-                worknameSelect.innerHTML = ''; 
+                worknameSelect.innerHTML = '';
                 const option = document.createElement('option');
                 option.textContent = message;
-                option.value = ""; 
-                option.disabled = true; 
-                option.selected = true; 
+                option.value = "";
+                option.disabled = true;
+                option.selected = true;
                 worknameSelect.appendChild(option);
-                worknameSelect.style.display = 'block'; 
-                isWorknameSelectShowingMessage = true; 
-                if(booknameInput) booknameInput.value = ''; 
+                worknameSelect.style.display = 'block';
+                // 品番コード未入力時は品名欄自体を無効化し、誤タップを防ぐ（上の品番コード欄へ誘導）
+                worknameSelect.disabled = disabledState;
+                isWorknameSelectShowingMessage = true;
+                if(booknameInput) booknameInput.value = '';
             }
 
             function expandWorknameOptions() {
@@ -276,7 +294,7 @@ const unitpriceDict = unitpriceDataElem
                     worknameSelect.style.display = 'none'; 
                     if(booknameInput) booknameInput.value = '';   
                     isWorknameSelectShowingMessage = true;
-                    populateWorknameSelectWithMessage('品番コードを3桁以上入力...'); 
+                    populateWorknameSelectWithMessage('⬆ 先に品番コード 3桁以上を入力', false, true); 
                     worknameSelect.value = "";
                     return;
                 }

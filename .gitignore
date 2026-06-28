@@ -7,5 +7,7 @@ __pycache__/
 # 仮想環境を除外
 .venv/
 
-# 環境設定ファイル（ローカル専用）
+# 環境設定ファイル（ローカル専用・APIトークン等の機密情報）
 .env
+configAirtable.json
+configGooglesheet.json
