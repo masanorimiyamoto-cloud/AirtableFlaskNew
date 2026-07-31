@@ -5,6 +5,14 @@ from oauth2client.service_account import ServiceAccountCredentials
 import time
 import os
 import logging
+import unicodedata
+
+# セルの表示形式（桁区切り・日付書式など）に影響されない生の値を取得する
+try:
+    from gspread.utils import ValueRenderOption
+    UNFORMATTED = ValueRenderOption.unformatted
+except Exception:  # gspreadのバージョン差異に備えたフォールバック
+    UNFORMATTED = "UNFORMATTED_VALUE"
 
 logger = logging.getLogger(__name__)
 if not logger.hasHandlers():
@@ -17,7 +25,9 @@ if not logger.hasHandlers():
 # ✅ Google Sheets 設定 (These should ideally come from environment variables or a config file too)
 SERVICE_ACCOUNT_FILE = os.environ.get("SERVICE_ACCOUNT_FILE", "configGooglesheet.json")
 SPREADSHEET_NAME = os.environ.get("SPREADSHEET_NAME", "AirtableTest129")
-WORKSHEET_NAME = "wsTableCD" 
+# ★ ファイル名は変更・コピーで簡単に壊れるので、可能ならキー(URLのID)で開く
+SPREADSHEET_KEY = os.environ.get("SPREADSHEET_KEY", "1RGdKiAqFehapGvTQM7GxCNrLC6Xzdup_O2qJOOWs7Uc")
+WORKSHEET_NAME = "wsTableCD"
 PERSONID_WORKSHEET_NAME = "wsPersonID"
 WORKPROCESS_WORKSHEET_NAME = "wsWorkProcess"
 
@@ -40,6 +50,41 @@ except Exception as e:
 
 
 CACHE_TTL = 300  # 300秒 (5分間)
+ERROR_RETRY_INTERVAL = 30  # ロード失敗時に再試行するまでの秒数（APIを叩き続けないため）
+
+
+def open_spreadsheet():
+    """スプレッドシートを開く。キー指定を優先し、駄目なら名前で開く。
+
+    名前で開く方法はリネームや同名コピーの作成で壊れるため、キーを先に試す。
+    """
+    if not client:
+        raise RuntimeError(f"Google Sheets クライアントが初期化されていません (認証ファイル: {SERVICE_ACCOUNT_FILE})")
+    if SPREADSHEET_KEY:
+        try:
+            return client.open_by_key(SPREADSHEET_KEY)
+        except Exception as e:
+            logger.warning(f"スプレッドシートをキー({SPREADSHEET_KEY})で開けませんでした: {e}。名前で再試行します。")
+    return client.open(SPREADSHEET_NAME)
+
+
+def normalize_workcord(value):
+    """WorkCord を検索キー用の半角数字文字列に正規化する。
+
+    シートのセル書式（桁区切り "1,555"、小数 "1555.0"、全角 "１５５５"、
+    前後の空白）に左右されずに一致させるための正規化。
+    """
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return ""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    s = unicodedata.normalize("NFKC", str(value)).strip()
+    s = s.replace(",", "").replace(" ", "").replace("　", "")
+    if s.endswith(".0"):
+        s = s[:-2]
+    return s
 
 # ===== PersonID データ =====
 PERSON_ID_DICT = {}
@@ -53,12 +98,12 @@ last_personid_load_time = 0
 
 def load_personid_data():
     global PERSON_ID_DICT, PERSON_ID_LIST, last_personid_load_time
-    if not client:
-        logger.error("Google Sheets クライアントが初期化されていません。PersonIDデータをロードできません。")
-        return
     try:
-        sheet = client.open(SPREADSHEET_NAME).worksheet(PERSONID_WORKSHEET_NAME)
-        records = sheet.get_all_records()
+        sheet = open_spreadsheet().worksheet(PERSONID_WORKSHEET_NAME)
+        records = sheet.get_all_records(
+            expected_headers=["PersonID", "PersonName", "PINHash"],
+            value_render_option=UNFORMATTED,
+        )
         temp_dict = {}
         temp_id_list = [] # PersonIDの数値リストもここで再構築
         for row in records:
@@ -87,20 +132,25 @@ def load_personid_data():
                  logger.warning(f"PersonID '{pid_str}' のデータが不完全です（名前がないなど）。")
 
 
+        if not temp_dict:
+            raise ValueError(
+                f"'{PERSONID_WORKSHEET_NAME}' から有効な行を1件も取得できませんでした "
+                f"(読み込み行数: {len(records)})。ヘッダー行の列名を確認してください。"
+            )
         PERSON_ID_DICT = temp_dict
         PERSON_ID_LIST = sorted(temp_id_list) # IDリストをソートしておく
         last_personid_load_time = time.time()
         logger.info(f"Google Sheets から {len(PERSON_ID_DICT)} 件の PersonID/PersonName/PINHash レコードをロードしました！")
     except Exception as e:
+        # ★ 失敗時に空にすると全員ログインできなくなるため、直前のキャッシュを保持する
+        last_personid_load_time = time.time() - CACHE_TTL + ERROR_RETRY_INTERVAL
         logger.error(f"Google Sheets の PersonID データ取得に失敗: {e}", exc_info=True)
-        PERSON_ID_DICT = {} # エラー時は空にする
-        PERSON_ID_LIST = []
 
 def get_cached_personid_data():
     # この関数は PERSON_ID_DICT と PERSON_ID_LIST を返すので、
     # PERSON_ID_DICT の構造が変わったことを呼び出し元が意識する必要があるかもしれない。
     # 今回は、PersonID選択ドロップダウンで名前も表示するために辞書も返す。
-    if not PERSON_ID_DICT or (time.time() - last_personid_load_time > CACHE_TTL):
+    if time.time() - last_personid_load_time > CACHE_TTL:
         logger.info("PersonIDキャッシュが無効または期限切れです。再ロードします。")
         load_personid_data()
     return PERSON_ID_DICT, PERSON_ID_LIST
@@ -110,35 +160,57 @@ def get_cached_personid_data():
 # ===== WorkCord/WorkName/BookName キャッシュ =====
 workcord_dict = {}
 last_workcord_load_time = 0
+workcord_load_error = ""  # 直近のロード失敗理由（空文字なら正常）
+
+# ★ 他の列（Kname, Material など）のヘッダーが空欄・重複していても
+#   gspread が GSpreadException を投げないように、必要な列だけを明示する
+WORKCORD_EXPECTED_HEADERS = ["WorkCord", "WorkName", "BookName"]
 
 def load_workcord_data():
-    global workcord_dict, last_workcord_load_time
-    if not client:
-        logger.error("Google Sheets クライアントが初期化されていません。WorkCordデータをロードできません。")
-        return
-    workcord_dict = {} # 毎回初期化
+    global workcord_dict, last_workcord_load_time, workcord_load_error
     try:
-        sheet = client.open(SPREADSHEET_NAME).worksheet(WORKSHEET_NAME)
-        records = sheet.get_all_records()
+        sheet = open_spreadsheet().worksheet(WORKSHEET_NAME)
+        records = sheet.get_all_records(
+            expected_headers=WORKCORD_EXPECTED_HEADERS,
+            value_render_option=UNFORMATTED,
+        )
+        new_dict = {}
         for row in records:
-            workcord = str(row.get("WorkCord", "")).strip()
+            workcord = normalize_workcord(row.get("WorkCord"))
             workname = str(row.get("WorkName", "")).strip()
             bookname = str(row.get("BookName", "")).strip()
             if workcord and workname: # BookNameは空でも許容するかもしれないので条件から外す場合も
-                if workcord not in workcord_dict:
-                    workcord_dict[workcord] = []
-                workcord_dict[workcord].append({"workname": workname, "bookname": bookname})
+                new_dict.setdefault(workcord, []).append({"workname": workname, "bookname": bookname})
+
+        if not new_dict:
+            # 行は読めたのに1件も作れない = ヘッダー名の変更やシート差し替えを疑う
+            raise ValueError(
+                f"'{WORKSHEET_NAME}' から有効な行を1件も取得できませんでした "
+                f"(読み込み行数: {len(records)})。ヘッダー行の WorkCord / WorkName 列名を確認してください。"
+            )
+
+        workcord_dict = new_dict
+        workcord_load_error = ""
+        last_workcord_load_time = time.time()
         total_records = sum(len(lst) for lst in workcord_dict.values())
         logger.info(f"Google Sheets から {total_records} 件の WorkCD/WorkName/BookName レコードをロードしました！")
-        last_workcord_load_time = time.time()
     except Exception as e:
+        # ★ 失敗しても既存のキャッシュは消さない（一時的なエラーで全滅させないため）
+        workcord_load_error = f"{type(e).__name__}: {e}"
+        last_workcord_load_time = time.time() - CACHE_TTL + ERROR_RETRY_INTERVAL
         logger.error(f"Google Sheets の WorkCordデータ取得に失敗: {e}", exc_info=True)
 
 def get_cached_workcord_data():
-    if not workcord_dict or (time.time() - last_workcord_load_time > CACHE_TTL):
+    # last_workcord_load_time は成功時も失敗時も更新されるので、
+    # 失敗中に入力1文字ごとへAPIを叩き続ける（レート制限を誘発する）ことがない
+    if time.time() - last_workcord_load_time > CACHE_TTL:
         logger.info("WorkCordキャッシュが無効または期限切れです。再ロードします。")
         load_workcord_data()
     return workcord_dict
+
+def get_workcord_load_error():
+    """WorkCordデータのロードに失敗している場合、その理由を返す（正常時は空文字）。"""
+    return workcord_load_error
 
 # ===== WorkProcess/UnitPrice データ =====
 workprocess_list_cache = []
@@ -147,12 +219,12 @@ last_workprocess_load_time = 0
 
 def load_workprocess_data():
     global workprocess_list_cache, unitprice_dict_cache, last_workprocess_load_time
-    if not client:
-        logger.error("Google Sheets クライアントが初期化されていません。WorkProcessデータをロードできません。")
-        return
     try:
-        sheet = client.open(SPREADSHEET_NAME).worksheet(WORKPROCESS_WORKSHEET_NAME)
-        records = sheet.get_all_records()
+        sheet = open_spreadsheet().worksheet(WORKPROCESS_WORKSHEET_NAME)
+        records = sheet.get_all_records(
+            expected_headers=["WorkProcess", "UnitPrice"],
+            value_render_option=UNFORMATTED,
+        )
         temp_list = []
         temp_dict = {}
         for row in records:
@@ -167,15 +239,22 @@ def load_workprocess_data():
                     logger.warning(f"WorkProcess '{wp}' の UnitPrice '{up_str}' をfloatに変換できませんでした。0として扱います。")
                     up = 0.0 # エラーの場合は0または他のデフォルト値
                 temp_dict[wp] = up
+        if not temp_list:
+            raise ValueError(
+                f"'{WORKPROCESS_WORKSHEET_NAME}' から有効な行を1件も取得できませんでした "
+                f"(読み込み行数: {len(records)})。ヘッダー行の列名を確認してください。"
+            )
         workprocess_list_cache = temp_list
         unitprice_dict_cache = temp_dict
         last_workprocess_load_time = time.time()
         logger.info(f"Google Sheets から {len(workprocess_list_cache)} 件の WorkProcess/UnitPrice レコードをロードしました！")
     except Exception as e:
+        # ★ 失敗しても直前のキャッシュを保持する
+        last_workprocess_load_time = time.time() - CACHE_TTL + ERROR_RETRY_INTERVAL
         logger.error(f"Google Sheets の WorkProcessデータ取得に失敗: {e}", exc_info=True)
 
 def get_cached_workprocess_data():
-    if not workprocess_list_cache or (time.time() - last_workprocess_load_time > CACHE_TTL):
+    if time.time() - last_workprocess_load_time > CACHE_TTL:
         logger.info("WorkProcessキャッシュが無効または期限切れです。再ロードします。")
         load_workprocess_data()
     return workprocess_list_cache, unitprice_dict_cache

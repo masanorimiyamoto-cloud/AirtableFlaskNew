@@ -2,7 +2,12 @@ from flask import Blueprint, jsonify, request, current_app # current_app をイ�
 # data_services.py から必要な関数をインポート
 # `your_flask_app` は実際のプロジェクトルートフォルダ名に置き換えてください
 # もし `blueprints` フォルダが `data_services.py` と同じ階層の `your_flask_app` 内にある場合
-from data_services import get_cached_workcord_data, get_cached_workprocess_data
+from data_services import (
+    get_cached_workcord_data,
+    get_cached_workprocess_data,
+    get_workcord_load_error,
+    normalize_workcord,
+)
 
 api_bp = Blueprint('api_bp', __name__, url_prefix='/api')
 
@@ -16,11 +21,21 @@ def get_worknames():
         return jsonify({"worknames": results, "error": ""})
 
     try:
-        workcd_num = int(workcd)
-        workcd = str(workcd_num) # 文字列として保持
+        # 先頭の0を落とす（マスタ側も数値化して保持しているため）
+        workcd = str(int(normalize_workcord(workcd)))
     except ValueError:
         current_app.logger.warning(f"/api/get_worknames - 無効なWorkCDが指定されました: {workcd}")
         return jsonify({"worknames": [], "error": "WorkCDは数値で入力してください"})
+
+    # ★ 品番マスタ自体が読めていない場合は「該当なし」ではなくエラーとして返す
+    #   （原因不明のまま「該当する品名がありません」と表示されるのを防ぐ）
+    load_error = get_workcord_load_error()
+    if load_error and not data:
+        current_app.logger.error(f"/api/get_worknames - 品番マスタが読み込めていません: {load_error}")
+        return jsonify({
+            "worknames": [],
+            "error": "品番マスタ(Google Sheets)を読み込めていません。管理者に連絡してください。"
+        })
 
     # 部分一致検索ロジック
     if len(workcd) >= 3:
