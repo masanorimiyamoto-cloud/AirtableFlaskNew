@@ -145,6 +145,9 @@
                        readonly class="form-control">
             </div>
 
+            <label for="workday">📅 作業日:</label>
+            <input type="date" id="workday" name="workday" value="{{ workday or '' }}" class="form-control" required>
+
             <label for="workcd">🔍 品番コード:</label>
             <input type="text" id="workcd" name="workcd" value="{{ workcd or '' }}" placeholder="3桁以上入力" class="form-control">
 
@@ -168,9 +171,6 @@
             <label for="workoutput">📦 数量（個、分）:</label>
             <input type="text" id="workoutput" name="workoutput" value="{{ workoutput or '' }}" class="form-control" required>
 
-            <label for="workday">📅 作業日:</label>
-            <input type="date" id="workday" name="workday" value="{{ workday or '' }}" class="form-control" required>
-            
             <button type="submit" id="submitButton" class="btn btn-primary">送信</button>
         </form>
         <div id="unitprice-data" data-json='{{ unitprice_data_for_js | tojson }}' style="display:none;"></div>
