@@ -2,6 +2,7 @@
 import os
 import requests
 import logging
+from work_names import normalize_workname
 
 
 from airtable_cache import cache_get, cache_set, cache_delete, month_key, MONTH_CACHE_TTL_SEC
@@ -55,6 +56,8 @@ def create_airtable_record(person_id: str, workcord: str, workname: str, booknam
     url = _build_airtable_url(person_id)
     if not url:
         return None, "⚠ AirtableのURL構築に失敗しました（設定不備の可能性）。", None
+
+    workname = normalize_workname(workname)
 
     try:
         workcord_int = int(workcord) if workcord else 0
@@ -178,7 +181,7 @@ def get_airtable_records_for_month(person_id: str, target_year: int, target_mont
                 "id": record.get("id", "不明なID"),
                 "WorkDay": fields.get("WorkDay", "9999-12-31"),
                 "WorkCD": fields.get("WorkCord", "不明"),
-                "WorkName": fields.get("WorkName", "不明"),
+                "WorkName": normalize_workname(fields.get("WorkName", "不明")),
                 "WorkProcess": fields.get("WorkProcess", "不明"),
                 "UnitPrice": fields.get("UnitPrice", "不明"),
                 "WorkOutput": fields.get("WorkOutput", "0"),
@@ -238,6 +241,7 @@ def get_airtable_record_details(person_id: str, record_id: str):
         response = requests.get(url, headers=HEADERS, timeout=10)
         response.raise_for_status()
         record_data = response.json().get("fields", {})
+        record_data["WorkName"] = normalize_workname(record_data.get("WorkName", ""))
         logger.info(f"Airtableレコード詳細取得成功: RecordID={record_id}, PersonID={person_id}")
         return record_data, None # データとエラーメッセージなし
     except requests.exceptions.HTTPError as http_err:
@@ -259,6 +263,9 @@ def update_airtable_record_fields(person_id: str, record_id: str, fields_to_upda
     if not url:
         return False, "⚠ AirtableのURL構築に失敗しました（設定不備の可能性）。"
 
+    fields_to_update = dict(fields_to_update)
+    if "WorkName" in fields_to_update:
+        fields_to_update["WorkName"] = normalize_workname(fields_to_update["WorkName"])
     data = {"fields": fields_to_update}
     try:
         logger.info(f"Airtableレコード更新開始: URL={url}, Data={data}, PersonID={person_id}, RecordID={record_id}")

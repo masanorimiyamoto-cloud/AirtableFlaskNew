@@ -11,15 +11,19 @@
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
             text-align: center;
-            padding: 10px;
+            padding: 6px;
             margin: 0;
+            box-sizing: border-box;
+            height: 100vh;
+            height: 100dvh;
         }
 
         .container {
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            padding: 10px;
+            height: 100%;
+            min-height: 0;
+            padding: 8px;
             box-sizing: border-box;
             max-width: 100%;
             margin: auto;
@@ -32,33 +36,50 @@
         
         /* ナビゲーションとタイトルのヘッダーエリア */
         .page-header {
-            padding: 5px 0 15px 0;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+            align-items: center;
+            gap: 4px 12px;
+            padding: 0 0 6px;
             border-bottom: 1px solid #eee;
             /* テーブルヘッダーが固定されることを考慮し、この部分はスクロールしない */
             flex-shrink: 0; 
+        }
+        .record-owner {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: bold;
+            overflow-wrap: anywhere;
         }
 
         /* 月移動ナビゲーション */
         .month-navigation {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
-            margin-bottom: 15px;
+            gap: 8px;
+            margin: 0;
         }
         .month-display {
             margin: 0;
-            font-size: 1.5em;
+            font-size: 1.25em;
             font-weight: bold;
             color: #333;
             white-space: nowrap;
         }
         .nav-arrow {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 44px;
+            min-height: 44px;
             font-family: 'Courier New', Courier, monospace;
-            font-size: 2.5em;
+            font-size: 2em;
             font-weight: bold;
             text-decoration: none;
             color: #007bff;
-            padding: 0 15px;
+            padding: 0;
+            border-radius: 5px;
             line-height: 1;
         }
         .nav-arrow:hover {
@@ -68,18 +89,23 @@
         /* アクションボタン（入力画面へ戻るなど） */
         .action-buttons-container {
             display: flex;
-            justify-content: center;
+            justify-content: flex-end;
         }
         .action-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            min-height: 44px;
             background-color: #28a745;
             color: white;
             border: none;
-            padding: 8px 16px;
+            padding: 6px 12px;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 14px;
             text-decoration: none;
-            margin: 0 5px;
+            white-space: nowrap;
         }
         .action-button:hover {
             background-color: #218838;
@@ -87,11 +113,12 @@
         
         /* Flash メッセージ */
         #flash-messages-container {
-            margin-bottom: 15px;
+            flex-shrink: 0;
+            margin: 6px 0;
         }
         .flash-message-item {
-            padding: 10px;
-            margin-bottom: 10px;
+            padding: 6px 10px;
+            margin: 0;
             border-radius: 5px;
             text-align: center;
             border: 1px solid transparent;
@@ -109,6 +136,7 @@
         /* テーブル部分だけスクロール */
         .table-container {
             flex: 1 1 auto;
+            min-height: 0;
             overflow-y: auto;
             overflow-x: auto;
         }
@@ -116,6 +144,8 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 0;
+            border-radius: 0;
+            overflow: visible;
         }
         th, td {
             border: 1px solid #ddd;
@@ -133,31 +163,62 @@
 
         /* アイコンボタン */
         .icon-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 44px;
+            width: 44px;
+            min-height: 44px;
+            box-sizing: border-box;
             background: none; border: none; cursor: pointer; font-size: 20px;
-            margin: 0 5px; padding: 5px; vertical-align: middle;
+            margin: 0; padding: 0; vertical-align: middle;
+            box-shadow: none;
+            border-radius: 5px;
+            text-decoration: none;
         }
-        .icon-button:hover { opacity: 0.7; }
+        .icon-button:hover { background: #e9ecef; transform: none; }
+        .nav-arrow:focus-visible,
+        .action-button:focus-visible,
+        .icon-button:focus-visible {
+            outline: 3px solid #0056b3;
+            outline-offset: 2px;
+        }
         /* 編集・削除を横並びにし、押し間違い防止のため間隔をあける */
         .row-actions {
             display: flex; flex-wrap: nowrap; align-items: center;
             justify-content: center; gap: 24px; white-space: nowrap;
         }
-        .row-actions .icon-button { margin: 0; }
+        /* 共通の入力フォーム用余白を削除ボタンに適用しない */
+        .row-actions form {
+            display: flex;
+            margin: 0;
+            padding: 0;
+            background: none;
+            border-radius: 0;
+            box-shadow: none;
+        }
 
         /* スマホ向け調整 */
         @media (max-width: 768px) {
             th, td { padding: 6px; font-size: 14px; }
             .icon-button { font-size: 18px; }
-            .action-button { font-size: 14px; padding: 7px 10px; }
+            .action-button { padding: 6px 10px; }
         }
-        @media (max-width: 480px) {
+        @media (max-width: 600px) {
+            .page-header {
+                grid-template-columns: minmax(0, 1fr) auto;
+                gap: 2px 8px;
+            }
+            .month-navigation {
+                grid-column: 1 / -1;
+                grid-row: 2;
+            }
+            .action-buttons-container {
+                grid-column: 2;
+                grid-row: 1;
+            }
             .month-display {
                 font-size: 1.2em;
-                padding: 0 5px;
-            }
-            .nav-arrow {
-                font-size: 2em;
-                padding: 0 10px;
             }
         }
 
@@ -171,14 +232,12 @@
 <body>
     <div class="container">
         <div class="page-header">
-            <div style="text-align:center; font-weight: bold; font-size: 1.1em; margin-bottom: 10px;">
-                {{ personid_dict[personid|int]['name'] }} さんの記録
-            </div>
+            <p class="record-owner">{{ current_person_name_for_display }} さんの記録</p>
 
             <div class="month-navigation">
-                <a href="{{ url_for('ui_bp.records', year=prev_year, month=prev_month) }}" class="nav-arrow" title="前月へ">&lt;</a>
+                <a href="{{ url_for('ui_bp.records', year=prev_year, month=prev_month) }}" class="nav-arrow" title="前月へ" aria-label="前月へ">&lt;</a>
                 <h2 class="month-display">{{ display_month }}</h2>
-                <a href="{{ url_for('ui_bp.records', year=next_year, month=next_month) }}" class="nav-arrow" title="次月へ">&gt;</a>
+                <a href="{{ url_for('ui_bp.records', year=next_year, month=next_month) }}" class="nav-arrow" title="次月へ" aria-label="次月へ">&gt;</a>
             </div>
             
             <div class="action-buttons-container">
@@ -225,11 +284,11 @@
                                 <td>{{ "{:,.0f}".format(record.subtotal) }}</td>
                                 <td>
                                   <div class="row-actions">
-                                    <a href="{{ url_for('ui_bp.edit_record', record_id=record.id, year=current_year, month=current_month) }}" class="icon-button" title="編集">✏️</a>
-                                    <form method="POST" action="{{ url_for('ui_bp.delete_record', record_id=record.id) }}" style="display:inline;">
+                                    <a href="{{ url_for('ui_bp.edit_record', record_id=record.id, year=current_year, month=current_month) }}" class="icon-button" title="編集" aria-label="{{ record.WorkDay }}の{{ record.WorkName }}を編集">✏️</a>
+                                    <form method="POST" action="{{ url_for('ui_bp.delete_record', record_id=record.id) }}">
                                         <input type="hidden" name="year"  value="{{ current_year }}">
                                         <input type="hidden" name="month" value="{{ current_month }}">
-                                        <button type="submit" class="icon-button" title="削除" onclick="return confirm('本当に削除しますか？');">🗑️</button>
+                                        <button type="submit" class="icon-button" title="削除" aria-label="{{ record.WorkDay }}の{{ record.WorkName }}を削除" onclick="return confirm('本当に削除しますか？');">🗑️</button>
                                     </form>
                                   </div>
                                 </td>
@@ -262,7 +321,6 @@
                 {% endif %}
             </table>
         </div>
-        <br>
     </div>
 <script>
     document.addEventListener('DOMContentLoaded', function() {

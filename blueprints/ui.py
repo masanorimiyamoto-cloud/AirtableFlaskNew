@@ -18,6 +18,7 @@ from airtable_service import (
     update_airtable_record_fields
 )
 from .auth import login_required # auth.py が同じ blueprints フォルダにあると仮定
+from work_names import normalize_workname
 
 # UI用 Blueprint を作成 (変更なし)
 ui_bp = Blueprint(
@@ -56,7 +57,7 @@ def index():
         workoutput = request.form.get("workoutput", "").strip() or "0"
         workprocess = request.form.get("workprocess", "").strip()
         workday = request.form.get("workday", "").strip()
-        selected_option = request.form.get("workname", "").strip()
+        selected_option = normalize_workname(request.form.get("workname", ""))
         bookname_from_hidden = request.form.get("bookname_hidden", "").strip()
 
         template_context.update({
